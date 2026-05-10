@@ -13,5 +13,8 @@ După ce modifici fișiere `.md` aici, în monorepo **SDK** rulează din rădăc
 | [defold-http-snippet.md](./defold-http-snippet.md) | Defold (Lua `http.request`) |
 | [web-typescript-bff-snippet.md](./web-typescript-bff-snippet.md) | Web TS / Phaser / Pixi / BFF |
 | [gamemaker-gml-http-snippet.md](./gamemaker-gml-http-snippet.md) | GameMaker (GML) |
+| [flame-dart-http-snippet.md](./flame-dart-http-snippet.md) | Flame / Flutter (Dart → BFF) |
+| [roblox-httpservice-snippet.md](./roblox-httpservice-snippet.md) | Roblox (Luau `HttpService`) |
+| [monogame-httpclient-note.md](./monogame-httpclient-note.md) | MonoGame / FNA → vezi Unity |
 
 Index documentație: [../README.md](../README.md).

@@ -22,10 +22,12 @@
 | **Defold** | Lua | `http.request` | Din context server / serviciu extern cu cheia. |
 | **GameMaker** | GML | `http_request` | Preferă job server sau extensie care nu expune cheia în client. |
 | **Cocos** (Creator / etc.) | TypeScript / C++ / Lua | `fetch`, `XMLHttpRequest`, native HTTP | Poate folosi același pattern ca web BFF dacă ești în TS. |
-| **MonoGame / FNA** | C# | `HttpClient` | La fel ca Unity din punct de vedere HTTP. |
+| **MonoGame / FNA** | C# | `HttpClient` | La fel ca Unity; vezi [monogame-httpclient-note](./examples/monogame-httpclient-note.md). |
 | **Ren'Py** | Python | `requests`, `urllib` | Cheia tot pe server; nu în distributiv vizibil jucătorului. |
 | **Love2D** | Lua | `https` (luasec) sau serviciu separat | Adesea mai simplu: microserviciu Node/Python cu SDK. |
 | **Phaser / Pixi / Vite** | TypeScript | `fetch` către **BFF** | Cheia doar pe server; vezi snippet web. |
+| **Flame / Flutter** | Dart | `http` / `dio` → **BFF** | Mobil + web; fără cheie în `--dart-define` public. |
+| **Roblox** | Luau | `HttpService:RequestAsync` → **BFF** pe allowlist | Cheia ZPL doar pe serverul tău, nu în experience. |
 
 Lista nu e exhaustivă: **orice motor** care poate face HTTPS din procesul care deține cheia (sau dintr-un backend lângă el) poate integra ZPL la fel — diferența e doar **codul de legătură** pe care îl scrii tu sau generezi.
 
@@ -75,6 +77,21 @@ Lista nu e exhaustivă: **orice motor** care poate face HTTPS din procesul care 
 
 - **`http_request`** + evenimente async; pentru jucători folosește bridge-ul tău, nu ZPL direct.
 - **Snippet:** [examples/gamemaker-gml-http-snippet.md](./examples/gamemaker-gml-http-snippet.md).
+
+## Flame / Flutter (Dart)
+
+- **Flame** rulează deasupra Flutter: același pattern **BFF** ca web-ul TypeScript.
+- **Snippet:** [examples/flame-dart-http-snippet.md](./examples/flame-dart-http-snippet.md).
+
+## Roblox (Luau)
+
+- **`HttpService`** doar din **server**; URL BFF pe **allowlist** în Game Settings; fără cheie ZPL în `ServerStorage` accesibil greșit.
+- **Snippet:** [examples/roblox-httpservice-snippet.md](./examples/roblox-httpservice-snippet.md).
+
+## MonoGame / FNA (C#)
+
+- **`HttpClient`** identic ca Unity headless; evită duplicarea — urmează snippet-ul Unity.
+- **Notă scurtă:** [examples/monogame-httpclient-note.md](./examples/monogame-httpclient-note.md).
 
 ## HTTP comun (Unity / Godot / Unreal)
 
