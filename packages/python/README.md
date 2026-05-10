@@ -42,6 +42,10 @@ pip install -e ".[dev]"
 
 **API key:** this library does not run a browser login. Obtain a `zpl_u_…` key from the [ZPL Main](https://zeropointlogic.io) dashboard (API keys), or use **`zpl login`** ([zpl-engine-cli](https://www.npmjs.com/package/zpl-engine-cli)) / **`npx zpl-engine-mcp setup`** ([zpl-engine-mcp](https://www.npmjs.com/package/zpl-engine-mcp)) for device-flow bootstrap, then set `ZPL_API_KEY` (or read from `~/.zpl/config.toml` on your dev machine only).
 
+## Game backends (Unity, Godot, Unreal, …)
+
+Use this SDK from **Python workers** (matchmaking, live ops, batch jobs). Game **clients** still should not hold long-lived keys; call the engine from your **server**. For multi-engine HTTP notes and the web demo catalog, see **[docs/games/README.md](../../docs/games/README.md)** in this repository.
+
 ## Quick Start
 
 ### Basic Usage (Synchronous)

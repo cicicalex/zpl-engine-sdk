@@ -20,6 +20,10 @@ npm install @zeropointlogic/sdk
 
 **API key:** no built-in login flow (same pattern as Stripe/OpenAI SDKs). Get a `zpl_u_…` key from the [ZPL Main](https://zeropointlogic.io) dashboard (API keys), or bootstrap with **`zpl login`** ([zpl-engine-cli](https://www.npmjs.com/package/zpl-engine-cli)) / **`npx zpl-engine-mcp setup`** ([zpl-engine-mcp](https://www.npmjs.com/package/zpl-engine-mcp)), then pass the key via `process.env.ZPL_API_KEY` or your secret manager.
 
+## Game backends (Unity, Godot, Unreal, …)
+
+This package targets **Node.js** and bundlers. Game **clients** usually do not embed it; your **authoritative server** (or a Node sidecar) calls the engine. For engine-specific HTTP patterns, demo catalog, and neutrality-as-decision-layer context, see **[docs/games/README.md](../../docs/games/README.md)** in this repository.
+
 ## Quick Start
 
 ```typescript

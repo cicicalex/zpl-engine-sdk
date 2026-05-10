@@ -11,7 +11,7 @@ Official HTTP clients and API artifacts for **[ZPL Engine](https://engine.zeropo
 
 ## MCP (agents) vs SDK (apps)
 
-- **Agents (Cursor, Claude Desktop, Windsurf):** install **[zpl-engine-mcp](https://www.npmjs.com/package/zpl-engine-mcp)** — `npx zpl-engine-mcp setup` for device-flow auth and MCP config. Source in this workspace: [../mcp/engine-mcp](../mcp/engine-mcp).
+- **Agents (Cursor, Claude Desktop, Windsurf):** install **[zpl-engine-mcp](https://www.npmjs.com/package/zpl-engine-mcp)** — `npx zpl-engine-mcp setup` for device-flow auth and MCP config. Source code may live in a separate org monorepo (e.g. `mcp/engine-mcp`); the npm package is the supported install surface.
 - **Applications (Node, browsers with care, Python workers):** use the TypeScript or Python package here. Prefer **server-side** API keys; do not ship long-lived `zpl_…` secrets in public client bundles.
 
 ## Getting an API key
@@ -28,6 +28,7 @@ All authenticated engine calls (`POST /compute`, etc.) are **rejected without a 
 
 ## Docs
 
+- [docs/README.md](docs/README.md) — index of all documentation in `docs/`.
 - [docs/openapi.yaml](docs/openapi.yaml) — OpenAPI 3.0 (source of truth for generators and Postman).
 - **Public spec (GitHub Pages):** after [Pages setup](docs/GITHUB_PAGES.md), use  
   `https://cicicalex.github.io/zpl-engine-sdk/openapi.yaml` when the GitHub **repository slug** is `zpl-engine-sdk`; otherwise replace the path segment with your repo name. Verify with `curl -fsSL …/openapi.yaml | head`.
