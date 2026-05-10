@@ -6,7 +6,7 @@ ZPL în aceste demo-uri este **strat de decizie privind neutralitatea**: simular
 
 ## Unde e codul
 
-| Rol | Path relativ din `C:\Dev` |
+| Rol | Path relativ la rădăcina workspace-ului (folder care conține `zpl_nodeweb/` și `zpl-games/`) |
 |-----|-----------------------------|
 | Pagini demo (EN root) | `zpl_nodeweb/src/app/demos/` (proiect ZPL Main Next.js) |
 | Pagini demo (`[lang]`) | `zpl_nodeweb/src/app/[lang]/demos/` |

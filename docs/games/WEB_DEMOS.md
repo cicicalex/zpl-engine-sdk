@@ -4,7 +4,7 @@
 
 ## Unde e codul
 
-- Proiect: **`C:\Dev\zpl_nodeweb`**
+- Proiect: **`zpl_nodeweb/`** (repo ZPL Main Next.js, în același workspace ca `zpl-games/`)
 - Rute tipice: `src/app/demos/<nume>/page.tsx`, index `src/app/demos/page.tsx`
 - Client demo comun: `src/lib/demo-engine.ts` (apel `POST /api/compute` cu `X-ZPL-Demo`)
 - Panou rezultat: `src/components/demos/engine-result.tsx` (doar câmpuri publice AIN / signal / status)
