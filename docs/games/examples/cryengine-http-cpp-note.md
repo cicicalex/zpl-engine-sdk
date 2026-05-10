@@ -1,6 +1,6 @@
 # CryEngine / **Amazon Lumberyard** (C++) — HTTP pe **server**
 
-În **CryEngine** și derivate (**Lumberyard** spre **O3DE**), integrarea ZPL respectă același model ca **Unreal**: **`IHttpRequest`** / client HTTP din **GameDLL** sau plugin care rulează pe **dedicated server** sau pe un **serviciu lateral**, cu cheia în **env** pe mașina server.
+În **CryEngine** și derivate (**Lumberyard** spre **O3DE**), integrarea ZPL respectă același model ca **Unreal**: **client HTTP** din **GameDLL** sau plugin care rulează pe **dedicated server** sau pe un **serviciu lateral**, cu cheia în **env** pe mașina server (API-ul exact depinde de versiunea CryEngine / LY).
 
 ## Recomandări
 
