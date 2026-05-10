@@ -3,7 +3,7 @@
   Verifica ca `docs/games` nu contina linkuri markdown spre `../zpl-engine-sdk/...` sau literali `C:\Dev` (rupe pe GitHub / nu sunt portabile).
 
 .NOTES
-  Mirror din workspace: scriptul `tools/sync-zpl-games-to-sdk.ps1` trebuie sa excluda la robocopy doar `zpl-games/README.md` (cale completa), nu pattern-ul global `README.md`, altfel nu se copiaza `examples/README.md`. Linkurile `[docs/README.md](../zpl-engine-sdk/docs/README.md)` din `zpl-games` se convertesc la `[../README.md](../README.md)` pentru `docs/games/`. Conversii: README monorepo radacina, link explicit `openapi.yaml` in TEMPLATE_REPOS (bracket fara `../`), apoi catch-all `../zpl-engine-sdk/docs/` -> `../` si `../../zpl-engine-sdk/docs/` -> `../../`.
+  Mirror din workspace: scriptul `tools/sync-zpl-games-to-sdk.ps1` trebuie sa excluda la robocopy doar `zpl-games/README.md` (cale completa), nu pattern-ul global `README.md`, altfel nu se copiaza `examples/README.md`. Linkurile `[docs/README.md](../zpl-engine-sdk/docs/README.md)` din `zpl-games` se convertesc la `[../README.md](../README.md)` pentru `docs/games/`. Conversii: README monorepo radacina, link explicit `openapi.yaml` in TEMPLATE_REPOS (bracket fara `../`), apoi catch-all `../zpl-engine-sdk/docs/` -> `../` si `../../zpl-engine-sdk/docs/` -> `../../`. Verificare URL: `](` + unul sau mai multi `../` + `zpl-engine-sdk/` (orice adancime); nu prinde `https://.../zpl-engine-sdk/`.
 
 .PARAMETER RepoRoot
   Rădăcina monorepo-ului SDK (folder care contine `docs/`). Implicit: părintele acestui script (`scripts/` -> radacina repo).
@@ -26,8 +26,7 @@ if (-not (Test-Path $Dst)) {
 }
 
 $patterns = @(
-  @{ Name = 'md-link paren ../zpl-engine-sdk/'; Regex = '\]\(\.\./zpl-engine-sdk/' }
-  @{ Name = 'md-link paren ../../zpl-engine-sdk/'; Regex = '\]\(\.\./\.\./zpl-engine-sdk/' }
+  @{ Name = 'md-link paren relative zpl-engine-sdk'; Regex = '\]\((\.\./)+zpl-engine-sdk/' }
   @{ Name = 'Windows path C:\Dev in games docs'; Regex = 'C:\\Dev' }
 )
 
