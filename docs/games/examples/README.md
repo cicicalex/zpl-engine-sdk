@@ -28,5 +28,7 @@ După ce modifici fișiere `.md` aici, în monorepo **SDK** rulează din rădăc
 | [stencyl-http-bff-snippet.md](./stencyl-http-bff-snippet.md) | Stencyl → BFF |
 | [godot-web-export-bff-note.md](./godot-web-export-bff-note.md) | Godot export Web → BFF |
 | [pico8-limit-note.md](./pico8-limit-note.md) | PICO-8 — limitări rețea |
+| [stride-httpclient-note.md](./stride-httpclient-note.md) | Stride (C#) → vezi Unity |
+| [w4-godot-note.md](./w4-godot-note.md) | Godot comercial / W4 → același flux |
 
 Index documentație: [../README.md](../README.md).

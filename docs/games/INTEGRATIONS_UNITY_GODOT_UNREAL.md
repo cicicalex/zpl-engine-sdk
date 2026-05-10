@@ -37,6 +37,7 @@
 | **Stencyl** | Haxe / blocuri | HTTP → BFF | Vezi [stencyl-http-bff-snippet.md](./examples/stencyl-http-bff-snippet.md). |
 | **Godot (export Web)** | GDScript / WASM | `HTTPRequest` → BFF | Vezi [godot-web-export-bff-note.md](./examples/godot-web-export-bff-note.md). |
 | **PICO-8** | Lua | rețea limitată | Vezi [pico8-limit-note.md](./examples/pico8-limit-note.md) — de obicei BFF în afara cartușului. |
+| **Stride** | C# | `HttpClient` | Vezi [stride-httpclient-note.md](./examples/stride-httpclient-note.md). |
 
 Lista nu e exhaustivă: **orice motor** care poate face HTTPS din procesul care deține cheia (sau dintr-un backend lângă el) poate integra ZPL la fel — diferența e doar **codul de legătură** pe care îl scrii tu sau generezi.
 
@@ -54,6 +55,7 @@ Lista nu e exhaustivă: **orice motor** care poate face HTTPS din procesul care 
 - Evită să pui cheia în `export` Android/iOS.
 - **Snippet complet + capcane export:** [examples/godot-server-snippet.md](./examples/godot-server-snippet.md).
 - **Export Web (HTML5 / WASM):** fără cheie ZPL în client browser — **BFF**; vezi [examples/godot-web-export-bff-note.md](./examples/godot-web-export-bff-note.md).
+- **Distribuții comerciale (ex. W4 Games):** același flux HTTP ca Godot 4; vezi [examples/w4-godot-note.md](./examples/w4-godot-note.md).
 
 ### Godot: erori HTTP, retry, `tokens_used` (G2)
 
@@ -154,6 +156,11 @@ Lista nu e exhaustivă: **orice motor** care poate face HTTPS din procesul care 
 
 - Rețea **limitată**; ZPL serios = **BFF în afara cartușului** sau alt stack (vezi notă).
 - **Notă:** [examples/pico8-limit-note.md](./examples/pico8-limit-note.md).
+
+## Stride (C# / .NET)
+
+- **`HttpClient`** pe proces server / serviciu .NET; clientul Stride nu deține cheia ZPL.
+- **Notă:** [examples/stride-httpclient-note.md](./examples/stride-httpclient-note.md).
 
 ## HTTP comun (Unity / Godot / Unreal)
 
