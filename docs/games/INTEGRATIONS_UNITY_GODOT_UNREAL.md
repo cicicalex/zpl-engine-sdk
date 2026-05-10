@@ -22,14 +22,16 @@
 | **Defold** | Lua | `http.request` | Din context server / serviciu extern cu cheia. |
 | **GameMaker** | GML | `http_request` | Preferă job server sau extensie care nu expune cheia în client. |
 | **Cocos** (Creator / etc.) | TypeScript / C++ / Lua | `fetch`, `XMLHttpRequest`, native HTTP | Poate folosi același pattern ca web BFF dacă ești în TS. |
-| **MonoGame / FNA** | C# | `HttpClient` | La fel ca Unity; vezi [monogame-httpclient-note](./examples/monogame-httpclient-note.md). |
+| **MonoGame / FNA** | C# | `HttpClient` | La fel ca Unity; vezi [monogame-httpclient-note.md](./examples/monogame-httpclient-note.md). |
 | **Ren'Py** | Python / Ren'Py DSL | `renpy.fetch`, BFF | Vezi [renpy-http-bridge-snippet.md](./examples/renpy-http-bridge-snippet.md); fără cheie în `.rpy` livrate. |
 | **Love2D** | Lua | BFF / microserviciu | Vezi [love2d-bridge-snippet.md](./examples/love2d-bridge-snippet.md); TLS în Lua e sensibil. |
 | **Phaser / Pixi / Vite** | TypeScript | `fetch` către **BFF** | Cheia doar pe server; vezi snippet web. |
 | **Flame / Flutter** | Dart | `http` / `dio` → **BFF** | Mobil + web; fără cheie în `--dart-define` public. |
 | **Roblox** | Luau | `HttpService:RequestAsync` → **BFF** pe allowlist | Cheia ZPL doar pe serverul tău, nu în experience. |
-| **.NET MAUI** | C# | `HttpClient` | Vezi [dotnet-maui-http-note](./examples/dotnet-maui-http-note.md). |
-| **Redot** | GDScript, C# | ca Godot | Vezi [redot-godot-note](./examples/redot-godot-note.md). |
+| **.NET MAUI** | C# | `HttpClient` | Vezi [dotnet-maui-http-note.md](./examples/dotnet-maui-http-note.md). |
+| **Redot** | GDScript, C# | ca Godot | Vezi [redot-godot-note.md](./examples/redot-godot-note.md). |
+| **Construct 3** | JavaScript (runtime) | **AJAX** → BFF | Vezi [construct3-ajax-bff-snippet.md](./examples/construct3-ajax-bff-snippet.md); CORS + domenii. |
+| **Haxe / OpenFL** | Haxe | `haxe.Http`, `fetch`, `URLRequest` | Vezi [haxe-openfl-http-snippet.md](./examples/haxe-openfl-http-snippet.md); țintă JS vs native. |
 
 Lista nu e exhaustivă: **orice motor** care poate face HTTPS din procesul care deține cheia (sau dintr-un backend lângă el) poate integra ZPL la fel — diferența e doar **codul de legătură** pe care îl scrii tu sau generezi.
 
@@ -114,6 +116,17 @@ Lista nu e exhaustivă: **orice motor** care poate face HTTPS din procesul care 
 
 - Același flux ca **Godot 4** pentru apeluri HTTP server-side.
 - **Notă:** [examples/redot-godot-note.md](./examples/redot-godot-note.md).
+
+## Construct 3
+
+- **AJAX** (sau echivalent) către **BFF**; configurare domenii pentru preview / export.
+- **Snippet:** [examples/construct3-ajax-bff-snippet.md](./examples/construct3-ajax-bff-snippet.md).
+
+## Haxe / OpenFL
+
+- **JS:** `haxe.Http` / `fetch` către BFF (ca web TypeScript).
+- **Native:** TLS sau proxy local; fără cheie în binarul jucătorilor.
+- **Snippet:** [examples/haxe-openfl-http-snippet.md](./examples/haxe-openfl-http-snippet.md).
 
 ## HTTP comun (Unity / Godot / Unreal)
 

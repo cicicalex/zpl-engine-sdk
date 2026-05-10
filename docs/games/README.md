@@ -22,7 +22,7 @@ Documentație pentru Alex, agenți AI (Claude, Cursor) și developeri care integ
 | [TEMPLATE_REPOS_PHASE_B.md](./TEMPLATE_REPOS_PHASE_B.md) | Backlog opțional: repo-uri `zpl-integration-*` |
 | [WEB_DEMOS.md](./WEB_DEMOS.md) | Legătura cu `zpl_nodeweb` `/demos` (referință cod) |
 | [AGENT_NOTES.md](./AGENT_NOTES.md) | Model mental corect vs greșeli frecvente la agenți |
-| [examples/](./examples/) | Snippets motoare (Godot, Unity, Unreal, Bevy, Defold, web, GML, Flame, Roblox, MonoGame, Ren'Py, Love2D, MAUI, Redot) |
+| [examples/](./examples/) | Snippets motoare (+ Construct 3, Haxe/OpenFL, …) |
 
 ## Înainte de PR (monorepo SDK)
 
