@@ -1,5 +1,11 @@
 # Motoare de joc — integrare ZPL (Unity, Godot, Unreal și altele)
 
+## Cuprins rapid
+
+- **Principii:** [Un contract](#un-contract-mai-multe-scrieri) · [Regulă de aur (server authoritative)](#regulă-de-aur-server-authoritative) · [Matrice motoare](#matrice-motoare-si-unde-scrii-apelul-zpl) · [HTTP comun (coduri)](#http-comun-unity-godot-unreal)
+- **Motoare „mari” (snippet principal):** [Unity](#unity) · [Godot](#godot) · [Unreal](#unreal)
+- **Toate snippet-urile și notele A–Z:** [examples/README.md](./examples/README.md)
+
 ## Un contract, mai multe „scrieri”
 
 - **ZPL Engine** expune același **API HTTP** (JSON) indiferent de motor.
@@ -11,7 +17,7 @@
 - **Cheia API** (`zpl_u_…`) stă pe **backend-ul** tău (dedicated server, Cloud Run, PlayFab Cloud Script, etc.), **nu** în build-ul clientului descărcat de jucători.
 - Clientul jocului primește doar **rezultatul derivat** (ex. verdict, tier, cooldown) pe canalul tău deja securizat (WebSocket, HTTPS la serverul de joc).
 
-## Matrice: motor → unde scrii apelul ZPL
+## Matrice motoare si unde scrii apelul ZPL
 
 | Motor / platformă | Limbaje tipice pe server | Client HTTP obișnuit | Notă |
 |-------------------|--------------------------|----------------------|------|
@@ -180,6 +186,11 @@ Lista nu e exhaustivă: **orice motor** care poate face HTTPS din procesul care 
 
 - **Dedicated server** / proces separat de client; fără cheie în **VPK**-uri livrate jucătorilor.
 - **Notă:** [examples/source2-server-http-note.md](./examples/source2-server-http-note.md).
+
+## id Tech (id Software)
+
+- **Dedicated server** + pachete client; fără cheie ZPL în `.pak` / config client.
+- **Notă:** [examples/idtech-dedicated-server-http-note.md](./examples/idtech-dedicated-server-http-note.md).
 
 ## Motor propriu (C / C++)
 
