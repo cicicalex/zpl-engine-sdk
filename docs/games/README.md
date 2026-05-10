@@ -26,7 +26,7 @@ Documentație pentru Alex, agenți AI (Claude, Cursor) și developeri care integ
 
 ## Înainte de PR (monorepo SDK)
 
-Din rădăcina repo-ului `zpl-engine-sdk`: `pwsh ./scripts/verify-docs-games.ps1` (sau `powershell` pe Windows). Pe GitHub, workflow-ul **Verify docs games** rulează aceeași verificare la push/PR când se schimbă `docs/games/`.
+Din rădăcina repo-ului `zpl-engine-sdk`: `pwsh ./scripts/verify-docs-games.ps1` (sau `powershell` pe Windows). Pe GitHub, workflow-ul **Verify docs games** rulează aceeași verificare la push/PR când se schimbă `docs/games/` sau `docs/README.md`. Index și checklist detaliat: [../README.md](../README.md) în monorepo.
 
 ## Legături utile
 

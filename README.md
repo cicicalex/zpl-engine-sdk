@@ -28,7 +28,7 @@ All authenticated engine calls (`POST /compute`, etc.) are **rejected without a 
 
 ## Docs
 
-- [docs/README.md](docs/README.md) — index of all documentation in `docs/`.
+- [docs/README.md](docs/README.md) — index of all documentation in `docs/` (includes a **PR checklist** for edits under `docs/games/`).
 - [docs/openapi.yaml](docs/openapi.yaml) — OpenAPI 3.0 (source of truth for generators and Postman).
 - **Public spec (GitHub Pages):** after [Pages setup](docs/GITHUB_PAGES.md), use  
   `https://cicicalex.github.io/zpl-engine-sdk/openapi.yaml` when the GitHub **repository slug** is `zpl-engine-sdk`; otherwise replace the path segment with your repo name. Verify with `curl -fsSL …/openapi.yaml | head`.
@@ -44,7 +44,7 @@ All authenticated engine calls (`POST /compute`, etc.) are **rejected without a 
 GitHub Actions:
 
 - [.github/workflows/openapi-pages.yml](.github/workflows/openapi-pages.yml) — OpenAPI public spec on Pages.
-- [.github/workflows/verify-docs-games.yml](.github/workflows/verify-docs-games.yml) — validates `docs/games` markdown (no broken relative links to a sibling `zpl-engine-sdk` folder, no `C:\Dev` literals); run locally with `pwsh ./scripts/verify-docs-games.ps1`.
+- [.github/workflows/verify-docs-games.yml](.github/workflows/verify-docs-games.yml) — validates `docs/games` markdown (no broken relative links to a sibling `zpl-engine-sdk` folder, no `C:\Dev` literals) when `docs/games/**` or `docs/README.md` changes; run locally with `pwsh ./scripts/verify-docs-games.ps1`.
 
 ## Changelog and security
 
