@@ -24,6 +24,10 @@ Documentație pentru Alex, agenți AI (Claude, Cursor) și developeri care integ
 | [AGENT_NOTES.md](./AGENT_NOTES.md) | Model mental corect vs greșeli frecvente la agenți |
 | [examples/](./examples/) | Snippets Godot / Unity / Unreal |
 
+## Înainte de PR (monorepo SDK)
+
+Din rădăcina repo-ului `zpl-engine-sdk`: `pwsh ./scripts/verify-docs-games.ps1` (sau `powershell` pe Windows). Pe GitHub, workflow-ul **Verify docs games** rulează aceeași verificare la push/PR când se schimbă `docs/games/`.
+
 ## Legături utile
 
 - SDK monorepo: [../../README.md](../../README.md), [UNITY.md](../UNITY.md)

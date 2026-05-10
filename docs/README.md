@@ -7,6 +7,7 @@
 | [OPENAPI_GENERATOR.md](./OPENAPI_GENERATOR.md) | Optional codegen (C#, Go, etc.) from OpenAPI |
 | [UNITY.md](./UNITY.md) | Unity: server-authoritative integration (F1) |
 | [games/README.md](./games/README.md) | **Games:** all engines (Godot, Unreal, …), demo catalog, HTTP snippets, dev registry |
+| [verify-docs-games.ps1](../scripts/verify-docs-games.ps1) | Local + CI: validate `docs/games` markdown (no sibling `zpl-engine-sdk` links, no `C:\Dev` literals); workflow `verify-docs-games.yml` |
 | [postman/](./postman/) | Postman collection |
 | [adr/](./adr/) | Architecture decision records |
 
