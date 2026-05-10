@@ -31,7 +31,8 @@
 | **.NET MAUI** | C# | `HttpClient` | Vezi [dotnet-maui-http-note.md](./examples/dotnet-maui-http-note.md). |
 | **Redot** | GDScript, C# | ca Godot | Vezi [redot-godot-note.md](./examples/redot-godot-note.md). |
 | **Construct 3** | JavaScript (runtime) | **AJAX** → BFF | Vezi [construct3-ajax-bff-snippet.md](./examples/construct3-ajax-bff-snippet.md); CORS + domenii. |
-| **Haxe / OpenFL** | Haxe | `haxe.Http`, `fetch`, `URLRequest` | Vezi [haxe-openfl-http-snippet.md](./examples/haxe-openfl-http-snippet.md); țintă JS vs native. |
+| **Haxe / OpenFL / Heaps** | Haxe | `haxe.Http`, `fetch`, `URLRequest`, `hxd.net` | Vezi [haxe-openfl-http-snippet.md](./examples/haxe-openfl-http-snippet.md); JS vs native. |
+| **GDevelop 5** | Evenimente / JS | extensii **Network** → BFF | Vezi [gdevelop-fetch-bff-snippet.md](./examples/gdevelop-fetch-bff-snippet.md). |
 
 Lista nu e exhaustivă: **orice motor** care poate face HTTPS din procesul care deține cheia (sau dintr-un backend lângă el) poate integra ZPL la fel — diferența e doar **codul de legătură** pe care îl scrii tu sau generezi.
 
@@ -122,11 +123,16 @@ Lista nu e exhaustivă: **orice motor** care poate face HTTPS din procesul care 
 - **AJAX** (sau echivalent) către **BFF**; configurare domenii pentru preview / export.
 - **Snippet:** [examples/construct3-ajax-bff-snippet.md](./examples/construct3-ajax-bff-snippet.md).
 
-## Haxe / OpenFL
+## Haxe / OpenFL / Heaps
 
-- **JS:** `haxe.Http` / `fetch` către BFF (ca web TypeScript).
-- **Native:** TLS sau proxy local; fără cheie în binarul jucătorilor.
+- **OpenFL / JS:** `haxe.Http` / `fetch` / `URLRequest` către BFF.
+- **Heaps:** același BFF; pe web folosește `fetch` sau API-ul Heaps pentru HTTP (vezi versiunea ta).
 - **Snippet:** [examples/haxe-openfl-http-snippet.md](./examples/haxe-openfl-http-snippet.md).
+
+## GDevelop 5
+
+- **Extensii rețea** sau **JS** către BFF; fără cheie ZPL în variabile exportate.
+- **Snippet:** [examples/gdevelop-fetch-bff-snippet.md](./examples/gdevelop-fetch-bff-snippet.md).
 
 ## HTTP comun (Unity / Godot / Unreal)
 

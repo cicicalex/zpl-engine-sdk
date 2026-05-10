@@ -25,4 +25,10 @@ req.request(true);
 
 - Poți folosi `openfl.net.URLRequest` + `URLLoader` cu `method = POST` și `data` JSON — aceleași reguli CORS / BFF ca mai sus.
 
+## Heaps (Haxe)
+
+- **Export JS / Web:** același model **BFF** ca OpenFL: `js.Browser.fetch` sau API-ul HTTP documentat pentru versiunea ta de **Heaps** (ex. clase din `hxd.net` — verifică changelog-ul, denumirile diferă între versiuni).
+- **HashLink / native:** TLS sau apel către proces local / BFF; **nu** încorpora cheia ZPL în pachetul livrat jucătorilor.
+- **CORS:** identic cu secțiunea OpenFL JS — BFF-ul trebuie să accepte `Origin`-ul unde rulează jocul.
+
 OpenAPI: [openapi.yaml](../../openapi.yaml).

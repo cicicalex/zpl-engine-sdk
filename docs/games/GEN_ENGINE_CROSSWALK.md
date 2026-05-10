@@ -13,4 +13,4 @@
 
 ## Concluzie
 
-„Genul” alege **ce observații** construiești; **motorul** alege **limbajul** glue-ului. Nu trebuie un SDK diferit per gen — doar per **stack** (vezi [INTEGRATIONS_UNITY_GODOT_UNREAL.md](./INTEGRATIONS_UNITY_GODOT_UNREAL.md)). Pentru **Rust ECS** (Bevy), **Lua** (Defold, Love2D), **browser** (TypeScript + BFF), **GML**, **Dart/Flutter** (Flame), **Roblox**, **MonoGame/FNA**, **Ren'Py**, **.NET MAUI**, **Redot** (ca Godot), **Construct 3** (AJAX) sau **Haxe/OpenFL**, vezi [examples/](./examples/).
+„Genul” alege **ce observații** construiești; **motorul** alege **limbajul** glue-ului. Nu trebuie un SDK diferit per gen — doar per **stack** (vezi [INTEGRATIONS_UNITY_GODOT_UNREAL.md](./INTEGRATIONS_UNITY_GODOT_UNREAL.md)). Pentru **Rust ECS** (Bevy), **Lua** (Defold, Love2D), **browser** (TypeScript + BFF), **GML**, **Dart/Flutter** (Flame), **Roblox**, **MonoGame/FNA**, **Ren'Py**, **.NET MAUI**, **Redot** (ca Godot), **Construct 3** (AJAX), **Haxe/OpenFL/Heaps** sau **GDevelop**, vezi [examples/](./examples/).

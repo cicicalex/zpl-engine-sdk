@@ -21,6 +21,7 @@ După ce modifici fișiere `.md` aici, în monorepo **SDK** rulează din rădăc
 | [dotnet-maui-http-note.md](./dotnet-maui-http-note.md) | .NET MAUI → vezi Unity |
 | [redot-godot-note.md](./redot-godot-note.md) | Redot → vezi Godot 4 |
 | [construct3-ajax-bff-snippet.md](./construct3-ajax-bff-snippet.md) | Construct 3 (AJAX → BFF) |
-| [haxe-openfl-http-snippet.md](./haxe-openfl-http-snippet.md) | Haxe / OpenFL → BFF |
+| [haxe-openfl-http-snippet.md](./haxe-openfl-http-snippet.md) | Haxe / OpenFL / Heaps → BFF |
+| [gdevelop-fetch-bff-snippet.md](./gdevelop-fetch-bff-snippet.md) | GDevelop 5 → BFF |
 
 Index documentație: [../README.md](../README.md).
