@@ -3,7 +3,7 @@
   Verifica ca `docs/games` nu contina linkuri markdown spre `../zpl-engine-sdk/...` sau literali `C:\Dev` (rupe pe GitHub / nu sunt portabile).
 
 .NOTES
-  Mirror din workspace: scriptul `tools/sync-zpl-games-to-sdk.ps1` trebuie sa excluda la robocopy doar `zpl-games/README.md` (cale completa), nu pattern-ul global `README.md`, altfel nu se copiaza `examples/README.md`. Linkurile `[docs/README.md](../zpl-engine-sdk/docs/README.md)` din `zpl-games` se convertesc la `[../README.md](../README.md)` pentru `docs/games/`.
+  Mirror din workspace: scriptul `tools/sync-zpl-games-to-sdk.ps1` trebuie sa excluda la robocopy doar `zpl-games/README.md` (cale completa), nu pattern-ul global `README.md`, altfel nu se copiaza `examples/README.md`. Linkurile `[docs/README.md](../zpl-engine-sdk/docs/README.md)` din `zpl-games` se convertesc la `[../README.md](../README.md)` pentru `docs/games/`. Conversii catch-all: `../zpl-engine-sdk/docs/` -> `../` si `../../zpl-engine-sdk/docs/` -> `../../` (dupa regulile specifice README root etc.).
 
 .PARAMETER RepoRoot
   Rădăcina monorepo-ului SDK (folder care contine `docs/`). Implicit: părintele acestui script (`scripts/` -> radacina repo).
