@@ -1,0 +1,27 @@
+# Verifică markdown în docs/games (linkuri oglindă, fără literali Windows).
+name: Verify docs games
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/games/**"
+      - "scripts/verify-docs-games.ps1"
+      - ".github/workflows/verify-docs-games.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "docs/games/**"
+      - "scripts/verify-docs-games.ps1"
+      - ".github/workflows/verify-docs-games.yml"
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run verify-docs-games.ps1
+        shell: pwsh
+        run: ./scripts/verify-docs-games.ps1
