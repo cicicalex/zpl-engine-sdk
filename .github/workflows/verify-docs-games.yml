@@ -16,6 +16,13 @@ on:
       - ".github/workflows/verify-docs-games.yml"
   workflow_dispatch:
 
+concurrency:
+  group: verify-docs-games-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
 jobs:
   verify:
     runs-on: ubuntu-latest
