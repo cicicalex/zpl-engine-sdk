@@ -1,0 +1,51 @@
+# Weekly health snapshot for the ZPL ecosystem.
+# Runs Monday 09:00 UTC (10:00 Bucharest in DST), posts to Telegram, and
+# fails the workflow loud (red bell on the Actions page) if anything is
+# unreachable or version-stale.
+#
+# Secrets required (Settings → Secrets and variables → Actions):
+#   TELEGRAM_BOT_TOKEN — botfather token
+#   TELEGRAM_CHAT_ID   — group chat id
+
+name: Weekly status
+
+on:
+  schedule:
+    # Mondays 09:00 UTC. Cron uses UTC always.
+    - cron: "0 9 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  status:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            scripts
+          sparse-checkout-cone-mode: false
+
+      - name: Install jq
+        run: sudo apt-get update -y && sudo apt-get install -y jq
+
+      - name: Run status check
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          # Force ANSI off in CI logs so the report is readable in raw text.
+          NO_COLOR: "1"
+        run: |
+          # Fall back to inline script if scripts/ wasn't checked out
+          # (sparse-checkout setup might miss it on first run).
+          if [ -f scripts/daily-status.sh ]; then
+            bash scripts/daily-status.sh
+          else
+            echo "scripts/daily-status.sh missing — falling back to inline check"
+            curl -sS --max-time 10 https://engine.zeropointlogic.io/health | jq .
+            curl -sS --max-time 10 https://registry.npmjs.org/zpl-engine-mcp/latest | jq .version
+            curl -sS --max-time 10 https://pypi.org/pypi/zeropointlogic/json | jq .info.version
+          fi
