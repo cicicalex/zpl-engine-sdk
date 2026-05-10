@@ -25,6 +25,7 @@
 | **MonoGame / FNA** | C# | `HttpClient` | La fel ca Unity din punct de vedere HTTP. |
 | **Ren'Py** | Python | `requests`, `urllib` | Cheia tot pe server; nu în distributiv vizibil jucătorului. |
 | **Love2D** | Lua | `https` (luasec) sau serviciu separat | Adesea mai simplu: microserviciu Node/Python cu SDK. |
+| **Phaser / Pixi / Vite** | TypeScript | `fetch` către **BFF** | Cheia doar pe server; vezi snippet web. |
 
 Lista nu e exhaustivă: **orice motor** care poate face HTTPS din procesul care deține cheia (sau dintr-un backend lângă el) poate integra ZPL la fel — diferența e doar **codul de legătură** pe care îl scrii tu sau generezi.
 
@@ -54,6 +55,26 @@ Lista nu e exhaustivă: **orice motor** care poate face HTTPS din procesul care 
 - **`FHttpModule`** / `IHttpRequest` din **GameMode** server sau subsystem dedicat, **nu** în client packaging.
 - Blueprint-uri: cel mult apelează **endpoint propriu** C++ care face HTTPS către ZPL.
 - **Sketch C++ + checklist packaging:** [examples/unreal-http-subsystem-sketch.md](./examples/unreal-http-subsystem-sketch.md).
+
+## Bevy (Rust)
+
+- **Server / bin headless:** `reqwest` + `tokio`; cheia din env. Nu compila același bin pentru wasm client cu cheie.
+- **Snippet:** [examples/bevy-reqwest-snippet.md](./examples/bevy-reqwest-snippet.md).
+
+## Defold (Lua)
+
+- **`http.request`** asincron; cheia în config **server-only** sau, preferat, BFF separat.
+- **Snippet:** [examples/defold-http-snippet.md](./examples/defold-http-snippet.md).
+
+## Web: TypeScript (Phaser, Pixi, Cocos Creator în browser)
+
+- **BFF same-origin** sau API de joc: browserul nu primește cheia ZPL.
+- **Snippet:** [examples/web-typescript-bff-snippet.md](./examples/web-typescript-bff-snippet.md).
+
+## GameMaker (GML)
+
+- **`http_request`** + evenimente async; pentru jucători folosește bridge-ul tău, nu ZPL direct.
+- **Snippet:** [examples/gamemaker-gml-http-snippet.md](./examples/gamemaker-gml-http-snippet.md).
 
 ## HTTP comun (Unity / Godot / Unreal)
 
