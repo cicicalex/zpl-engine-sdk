@@ -31,6 +31,11 @@ Scop: același **model mental** pentru toți agenții care lucrează în workspa
 | `zpl_nodeweb` | Agent cu **blueprint**; fără pagini noi fără plan. |
 | `zpl-games/` (workspace) / `docs/games/` (repo SDK) | Același conținut oglindit; PR-uri publice pe repo-ul SDK. Clarificări mici OK. |
 
+## După ce editezi `docs/games` (oglindă)
+
+- În monorepo **SDK** (rădăcina repo-ului): `pwsh ./scripts/verify-docs-games.ps1` înainte de commit; pe GitHub rulează workflow-ul **Verify docs games**.
+- În **workspace Dev** (cu `zpl-games/` + `tools/`): `powershell -File tools/sync-zpl-games-to-sdk.ps1` — copiază în `zpl-engine-sdk/docs/games/` și rulează aceeași verificare (omită cu `-SkipVerify` doar dacă depanezi).
+
 ## Ce poate face „Cursor SDK” vs „Claude MCP/CLI”
 
 - **Cursor (zona SDK):** OpenAPI, README-uri integrare, `UNITY.md`, exemple HTTP, versioning npm/PyPI.
