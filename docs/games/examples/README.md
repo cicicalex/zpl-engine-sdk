@@ -23,5 +23,7 @@ După ce modifici fișiere `.md` aici, în monorepo **SDK** rulează din rădăc
 | [construct3-ajax-bff-snippet.md](./construct3-ajax-bff-snippet.md) | Construct 3 (AJAX → BFF) |
 | [haxe-openfl-http-snippet.md](./haxe-openfl-http-snippet.md) | Haxe / OpenFL / Heaps → BFF |
 | [gdevelop-fetch-bff-snippet.md](./gdevelop-fetch-bff-snippet.md) | GDevelop 5 → BFF |
+| [fusion-clickteam-bff-snippet.md](./fusion-clickteam-bff-snippet.md) | Clickteam Fusion → BFF |
+| [unreal-lyra-packaging-note.md](./unreal-lyra-packaging-note.md) | Unreal Lyra + dedicated server |
 
 Index documentație: [../README.md](../README.md).

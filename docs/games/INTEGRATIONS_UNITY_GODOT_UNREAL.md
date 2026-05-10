@@ -33,6 +33,7 @@
 | **Construct 3** | JavaScript (runtime) | **AJAX** → BFF | Vezi [construct3-ajax-bff-snippet.md](./examples/construct3-ajax-bff-snippet.md); CORS + domenii. |
 | **Haxe / OpenFL / Heaps** | Haxe | `haxe.Http`, `fetch`, `URLRequest`, `hxd.net` | Vezi [haxe-openfl-http-snippet.md](./examples/haxe-openfl-http-snippet.md); JS vs native. |
 | **GDevelop 5** | Evenimente / JS | extensii **Network** → BFF | Vezi [gdevelop-fetch-bff-snippet.md](./examples/gdevelop-fetch-bff-snippet.md). |
+| **Clickteam Fusion 2.5+** | Evenimente | GET/POST / extensii → BFF | Vezi [fusion-clickteam-bff-snippet.md](./examples/fusion-clickteam-bff-snippet.md). |
 
 Lista nu e exhaustivă: **orice motor** care poate face HTTPS din procesul care deține cheia (sau dintr-un backend lângă el) poate integra ZPL la fel — diferența e doar **codul de legătură** pe care îl scrii tu sau generezi.
 
@@ -62,6 +63,7 @@ Lista nu e exhaustivă: **orice motor** care poate face HTTPS din procesul care 
 - **`FHttpModule`** / `IHttpRequest` din **GameMode** server sau subsystem dedicat, **nu** în client packaging.
 - Blueprint-uri: cel mult apelează **endpoint propriu** C++ care face HTTPS către ZPL.
 - **Sketch C++ + checklist packaging:** [examples/unreal-http-subsystem-sketch.md](./examples/unreal-http-subsystem-sketch.md).
+- **Șablon Lyra (GAS, dedicated server):** [examples/unreal-lyra-packaging-note.md](./examples/unreal-lyra-packaging-note.md).
 
 ## Bevy (Rust)
 
@@ -133,6 +135,11 @@ Lista nu e exhaustivă: **orice motor** care poate face HTTPS din procesul care 
 
 - **Extensii rețea** sau **JS** către BFF; fără cheie ZPL în variabile exportate.
 - **Snippet:** [examples/gdevelop-fetch-bff-snippet.md](./examples/gdevelop-fetch-bff-snippet.md).
+
+## Clickteam Fusion 2.5+
+
+- **GET/POST** sau extensii rețea către **BFF**; fără cheie în `.mfa` / exporturi mobile sau HTML5.
+- **Snippet:** [examples/fusion-clickteam-bff-snippet.md](./examples/fusion-clickteam-bff-snippet.md).
 
 ## HTTP comun (Unity / Godot / Unreal)
 
