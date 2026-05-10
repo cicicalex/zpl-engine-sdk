@@ -1,6 +1,6 @@
 # ZPL Games — model conceptual și integrări
 
-Documentație pentru Alex, agenți AI (Claude, Cursor) și developeri care integrează **ZPL Engine** în jocuri. **Publicată în acest repo** sub `docs/games/`; **copie pe GitHub:** [tree `docs/games`](https://github.com/cicicalex/zpl-engine-sdk/tree/main/docs/games). Într-un workspace ZPL mai mare poate exista și o copie oglindă `zpl-games/` la rădăcină — păstrează-le aliniate la PR-uri (editezi una, portezi în cealaltă înainte de push). **Un API HTTP**, **mai multe motoare** — fiecare (Unity, Godot, Unreal, Bevy, Defold, …) are **propriul strat de scriere** (glue); lista se extinde pe măsură ce apar motoare noi.
+Documentație pentru Alex, agenți AI (Claude, Cursor) și developeri care integrează **ZPL Engine** în jocuri. **Publicată în acest repo** sub `docs/games/`; **copie pe GitHub:** [tree `docs/games`](https://github.com/cicicalex/zpl-engine-sdk/tree/main/docs/games). Într-un workspace ZPL mai mare poate exista și o copie oglindă `zpl-games/` la rădăcină — înainte de PR aici, aliniază-le (script `tools/sync-zpl-games-to-sdk.ps1` în acel workspace, sau copiere manuală a aceluiași arbore). **Un API HTTP**, **mai multe motoare** — fiecare (Unity, Godot, Unreal, Bevy, Defold, …) are **propriul strat de scriere** (glue); lista se extinde pe măsură ce apar motoare noi.
 
 ## Neutralitate ca strat de decizie
 
