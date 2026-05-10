@@ -35,5 +35,6 @@ După ce modifici fișiere `.md` aici, în monorepo **SDK** rulează din rădăc
 | [source2-server-http-note.md](./source2-server-http-note.md) | Source 2 (dedicated server) |
 | [custom-engine-c-http-note.md](./custom-engine-c-http-note.md) | Motor propriu C/C++ |
 | [idtech-dedicated-server-http-note.md](./idtech-dedicated-server-http-note.md) | id Tech (dedicated server) |
+| [serious-engine-http-cpp-note.md](./serious-engine-http-cpp-note.md) | Serious Engine (Croteam, dedicated) |
 
 Index documentație: [../README.md](../README.md) · cuprins secțiuni: [INTEGRATIONS…#cuprins-rapid](../INTEGRATIONS_UNITY_GODOT_UNREAL.md#cuprins-rapid)

@@ -47,6 +47,8 @@
 | **O3DE** | C++ | HTTP pe **server** / Gem | Vezi [o3de-http-cpp-note.md](./examples/o3de-http-cpp-note.md). |
 | **CryEngine / Lumberyard** | C++ | HTTP pe **server** dedicat | Vezi [cryengine-http-cpp-note.md](./examples/cryengine-http-cpp-note.md). |
 | **Source 2** (Valve) | C++ | HTTP pe **SRCDS** / dedicat | Vezi [source2-server-http-note.md](./examples/source2-server-http-note.md). |
+| **id Tech** (id Software) | C++ | HTTP pe **dedicated** / bin server | Vezi [idtech-dedicated-server-http-note.md](./examples/idtech-dedicated-server-http-note.md). |
+| **Serious Engine** (Croteam) | C++ (uneori AngelScript pe server) | HTTP pe **dedicated** / serviciu lângă server | Vezi [serious-engine-http-cpp-note.md](./examples/serious-engine-http-cpp-note.md). |
 | **Motor propriu (C/C++)** | C / C++ | `libcurl` / daemon | Vezi [custom-engine-c-http-note.md](./examples/custom-engine-c-http-note.md). |
 
 Lista nu e exhaustivă: **orice motor** care poate face HTTPS din procesul care deține cheia (sau dintr-un backend lângă el) poate integra ZPL la fel — diferența e doar **codul de legătură** pe care îl scrii tu sau generezi.
@@ -191,6 +193,11 @@ Lista nu e exhaustivă: **orice motor** care poate face HTTPS din procesul care 
 
 - **Dedicated server** + pachete client; fără cheie ZPL în `.pak` / config client.
 - **Notă:** [examples/idtech-dedicated-server-http-note.md](./examples/idtech-dedicated-server-http-note.md).
+
+## Serious Engine (Croteam)
+
+- **Dedicated server** C++ (și scripturi server-side unde există); cheia ZPL rămâne în procesul server sau într-un **BFF** lângă el — nu în pachetele livrate clientului.
+- **Notă:** [examples/serious-engine-http-cpp-note.md](./examples/serious-engine-http-cpp-note.md).
 
 ## Motor propriu (C / C++)
 
