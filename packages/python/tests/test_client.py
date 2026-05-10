@@ -1,0 +1,278 @@
+"""Tests for ZPL Engine client."""
+
+import unittest
+from unittest.mock import Mock, patch, MagicMock
+
+from zeropointlogic import ZPLClient, AsyncZPLClient, ZPL_SDK_CLIENT_TYPE
+from zeropointlogic import __version__
+from zeropointlogic.models import ComputeResult, UsageInfo, PlanInfo, HealthStatus
+from zeropointlogic.exceptions import (
+    ZPLError,
+    ZPLAuthError,
+    ZPLQuotaError,
+    ZPLValidationError,
+    ZPLNetworkError,
+    ZPLRateLimitError,
+)
+
+
+class TestZPLClientInit(unittest.TestCase):
+    """Test client initialization."""
+
+    def test_init_valid_api_key(self):
+        """Test initialization with valid API key."""
+        client = ZPLClient(api_key="zpl_test123")
+        assert client.api_key == "zpl_test123"
+        assert client.base_url == "https://engine.zeropointlogic.io"
+
+    def test_init_empty_api_key(self):
+        """Test initialization with empty API key."""
+        with self.assertRaises(ValueError):
+            ZPLClient(api_key="")
+
+    def test_init_custom_base_url(self):
+        """Test initialization with custom base URL."""
+        client = ZPLClient(api_key="zpl_test", base_url="http://localhost:8000/")
+        assert client.base_url == "http://localhost:8000"
+
+    def test_init_timeout_and_retries(self):
+        """Test initialization with custom timeout and retries."""
+        client = ZPLClient(
+            api_key="zpl_test", timeout=60, max_retries=5, backoff_factor=1.0
+        )
+        assert client.timeout == 60
+        assert client.max_retries == 5
+        assert client.backoff_factor == 1.0
+
+
+class TestZPLClientHeaders(unittest.TestCase):
+    """ADR 0002 optional telemetry headers."""
+
+    def test_default_zpl_client_headers(self):
+        client = ZPLClient(api_key="zpl_test")
+        h = client._get_headers()
+        self.assertEqual(h["X-ZPL-Client"], ZPL_SDK_CLIENT_TYPE)
+        self.assertEqual(h["X-ZPL-Client"], "sdk-python")
+        self.assertEqual(h["X-ZPL-Client-Version"], __version__)
+
+    def test_override_zpl_client_headers(self):
+        client = ZPLClient(
+            api_key="zpl_test",
+            x_zpl_client="custom-bridge",
+            x_zpl_client_version="9.8.7",
+        )
+        h = client._get_headers()
+        self.assertEqual(h["X-ZPL-Client"], "custom-bridge")
+        self.assertEqual(h["X-ZPL-Client-Version"], "9.8.7")
+
+
+class TestZPLClientValidation(unittest.TestCase):
+    """Test input validation."""
+
+    def setUp(self):
+        self.client = ZPLClient(api_key="zpl_test")
+
+    def test_validate_matrix_empty(self):
+        """Test validation of empty matrix."""
+        with self.assertRaises(ZPLValidationError):
+            self.client._validate_matrix([])
+
+    def test_validate_matrix_invalid_values(self):
+        """Test validation of matrix with invalid values."""
+        with self.assertRaises(ZPLValidationError):
+            self.client._validate_matrix([[0, 2, 1]])
+
+    def test_validate_matrix_inconsistent_rows(self):
+        """Test validation of matrix with inconsistent row lengths."""
+        with self.assertRaises(ZPLValidationError):
+            self.client._validate_matrix([[0, 1], [1]])
+
+    def test_validate_matrix_valid(self):
+        """Test validation of valid matrix."""
+        # Should not raise
+        self.client._validate_matrix([[0, 1], [1, 0]])
+
+
+class TestZPLClientCompute(unittest.TestCase):
+    """Test compute operations."""
+
+    @patch("zeropointlogic.client.ZPLClient._make_request")
+    def test_compute_success(self, mock_request):
+        """Test successful compute operation."""
+        mock_request.return_value = {
+            "ain": 0.75,
+            "p_output": 0.52,
+            "deviation": 0.08,
+            "status": "STABLE",
+            "tokens_used": 1,
+            "tokens_remaining": 999,
+        }
+
+        client = ZPLClient(api_key="zpl_test")
+        result = client.compute([[0, 1], [1, 0]], samples=100)
+
+        assert isinstance(result, ComputeResult)
+        assert result.ain == 0.75
+        assert result.status == "STABLE"
+        assert result.tokens_remaining == 999
+        assert result.is_stable()
+
+    def test_compute_invalid_samples(self):
+        """Test compute with invalid samples."""
+        client = ZPLClient(api_key="zpl_test")
+        with self.assertRaises(ZPLValidationError):
+            client.compute([[0, 1], [1, 0]], samples=0)
+
+    @patch("zeropointlogic.client.ZPLClient._make_request")
+    def test_batch_compute_success(self, mock_request):
+        """Test successful batch compute."""
+        mock_request.side_effect = [
+            {
+                "ain": 0.70,
+                "p_output": 0.50,
+                "deviation": 0.10,
+                "status": "STABLE",
+                "tokens_used": 1,
+                "tokens_remaining": 999,
+            },
+            {
+                "ain": 0.80,
+                "p_output": 0.55,
+                "deviation": 0.05,
+                "status": "CERTIFIED_NEUTRAL",
+                "tokens_used": 1,
+                "tokens_remaining": 998,
+            },
+        ]
+
+        client = ZPLClient(api_key="zpl_test")
+        matrices = [[[0, 1], [1, 0]], [[1, 1], [0, 0]]]
+        results = client.batch_compute(matrices, samples=100)
+
+        assert len(results) == 2
+        assert results[0].ain == 0.70
+        assert results[1].ain == 0.80
+
+
+class TestZPLClientMethods(unittest.TestCase):
+    """Test client methods."""
+
+    @patch("zeropointlogic.client.ZPLClient._make_request")
+    def test_get_usage(self, mock_request):
+        """Test get_usage method."""
+        mock_request.return_value = {
+            "plan": "pro",
+            "tokens_used": 5000,
+            "tokens_limit": 50000,
+            "tokens_remaining": 45000,
+            "reset_date": "2026-05-06",
+            "requests_made": 150,
+            "last_reset": "2026-04-06",
+        }
+
+        client = ZPLClient(api_key="zpl_test")
+        usage = client.get_usage()
+
+        assert isinstance(usage, UsageInfo)
+        assert usage.plan == "pro"
+        assert usage.tokens_remaining == 45000
+        assert usage.usage_percent == 10.0
+
+    @patch("zeropointlogic.client.ZPLClient._make_request")
+    def test_get_plans(self, mock_request):
+        """Test get_plans method."""
+        mock_request.return_value = {
+            "plans": [
+                {
+                    "name": "Free",
+                    "tokens_per_month": 100,
+                    "price_usd": 0.0,
+                    "price_eur": 0.0,
+                    "features": ["API access", "5 requests/minute"],
+                },
+                {
+                    "name": "Basic",
+                    "tokens_per_month": 10000,
+                    "price_usd": 10.0,
+                    "price_eur": 9.0,
+                    "features": ["API access", "100 requests/minute"],
+                },
+            ]
+        }
+
+        client = ZPLClient(api_key="zpl_test")
+        plans = client.get_plans()
+
+        assert len(plans) == 2
+        assert plans[0].name == "Free"
+        assert plans[0].is_free()
+        assert not plans[1].is_free()
+
+    @patch("zeropointlogic.client.ZPLClient._make_request")
+    def test_get_health(self, mock_request):
+        """Test get_health method."""
+        mock_request.return_value = {
+            "status": "up",
+            "uptime_percent": 99.95,
+            "response_time_ms": 45.2,
+            "requests_per_second": 150.5,
+            "error_rate_percent": 0.05,
+            "last_check": "2026-04-06T12:00:00Z",
+            "version": "1.2.3",
+        }
+
+        client = ZPLClient(api_key="zpl_test")
+        health = client.get_health()
+
+        assert isinstance(health, HealthStatus)
+        assert health.status == "up"
+        assert health.is_healthy()
+
+
+class TestErrorHandling(unittest.TestCase):
+    """Test error handling."""
+
+    def setUp(self):
+        self.client = ZPLClient(api_key="zpl_test")
+
+    def test_handle_401_error(self):
+        """Test handling of 401 Unauthorized."""
+        with self.assertRaises(ZPLAuthError):
+            self.client._handle_error_response(401, {"error": "Invalid API key"})
+
+    def test_handle_402_error(self):
+        """Test handling of 402 Payment Required."""
+        with self.assertRaises(ZPLQuotaError) as ctx:
+            self.client._handle_error_response(
+                402, {"error": "Quota exceeded", "tokens_remaining": 0}
+            )
+        assert ctx.exception.tokens_remaining == 0
+
+    def test_handle_400_error(self):
+        """Test handling of 400 Bad Request."""
+        with self.assertRaises(ZPLValidationError) as ctx:
+            self.client._handle_error_response(
+                400, {"error": "Invalid matrix", "field": "matrix"}
+            )
+        assert ctx.exception.field == "matrix"
+
+    def test_handle_429_error(self):
+        """Test handling of 429 Too Many Requests."""
+        with self.assertRaises(ZPLRateLimitError) as ctx:
+            self.client._handle_error_response(
+                429, {"error": "Rate limited", "retry_after": "30"}
+            )
+        assert ctx.exception.retry_after == 30
+
+
+class TestContextManager(unittest.TestCase):
+    """Test context manager functionality."""
+
+    def test_context_manager(self):
+        """Test using client as context manager."""
+        with ZPLClient(api_key="zpl_test") as client:
+            assert client.api_key == "zpl_test"
+
+
+if __name__ == "__main__":
+    unittest.main()

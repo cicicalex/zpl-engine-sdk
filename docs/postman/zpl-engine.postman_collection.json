@@ -1,0 +1,76 @@
+{
+  "info": {
+    "_postman_id": "zpl-engine-collection-001",
+    "name": "ZPL Engine API",
+    "description": "Official-style requests for https://engine.zeropointlogic.io. Set collection variables baseUrl and apiKey.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "https://engine.zeropointlogic.io" },
+    { "key": "apiKey", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "GET /health",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/health"
+      }
+    },
+    {
+      "name": "GET /plans",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{apiKey}}", "type": "text" },
+          { "key": "X-API-Key", "value": "{{apiKey}}", "type": "text" }
+        ],
+        "url": "{{baseUrl}}/plans"
+      }
+    },
+    {
+      "name": "POST /compute (matrix)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{apiKey}}", "type": "text" },
+          { "key": "X-API-Key", "value": "{{apiKey}}", "type": "text" },
+          { "key": "Content-Type", "value": "application/json", "type": "text" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"matrix\": [[0,1],[1,0]],\n  \"samples\": 500\n}"
+        },
+        "url": "{{baseUrl}}/compute"
+      }
+    },
+    {
+      "name": "POST /compute (d/bias)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{apiKey}}", "type": "text" },
+          { "key": "X-API-Key", "value": "{{apiKey}}", "type": "text" },
+          { "key": "Content-Type", "value": "application/json", "type": "text" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"d\": 9,\n  \"bias\": 0.5,\n  \"samples\": 1000\n}"
+        },
+        "url": "{{baseUrl}}/compute"
+      }
+    },
+    {
+      "name": "GET /sweep",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{apiKey}}", "type": "text" },
+          { "key": "X-API-Key", "value": "{{apiKey}}", "type": "text" }
+        ],
+        "url": "{{baseUrl}}/sweep?d=9&samples=1000"
+      }
+    }
+  ]
+}

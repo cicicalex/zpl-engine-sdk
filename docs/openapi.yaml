@@ -1,0 +1,279 @@
+openapi: 3.0.3
+info:
+  title: ZPL Engine API
+  description: |
+    Public HTTPS API for AI Neutrality Index (AIN) and related metrics.
+    Computation runs on the server; clients send parameters only.
+    Authentication: send the same API key as `Authorization: Bearer <key>` and/or `X-API-Key: <key>` (engine accepts either pattern used by official clients).
+
+    **Optional telemetry (ADR 0002):** official clients send `X-ZPL-Client` and `X-ZPL-Client-Version` headers on authenticated calls so traffic can be attributed once the engine persists them. Values are documented under each operation; the engine ignores unknown slugs today.
+  version: "1.0.2"
+  contact:
+    name: Zero Point Logic
+    url: https://zeropointlogic.io
+
+servers:
+  - url: https://engine.zeropointlogic.io
+    description: Production
+
+security:
+  - bearerAuth: []
+  - ApiKeyAuth: []
+
+paths:
+  /health:
+    get:
+      summary: Engine health
+      security: []
+      operationId: getHealth
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+  /plans:
+    get:
+      summary: List pricing plans
+      operationId: getPlans
+      parameters:
+        - $ref: "#/components/parameters/XZplClient"
+        - $ref: "#/components/parameters/XZplClientVersion"
+      responses:
+        "200":
+          description: Catalog
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlansWrapper"
+
+  /compute:
+    post:
+      summary: Run AIN computation
+      operationId: postCompute
+      parameters:
+        - $ref: "#/components/parameters/XZplClient"
+        - $ref: "#/components/parameters/XZplClientVersion"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: "#/components/schemas/ComputeMatrixRequest"
+                - $ref: "#/components/schemas/ComputeBiasRequest"
+      responses:
+        "200":
+          description: Compute result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ComputeResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EngineError"
+        "401":
+          description: Invalid or missing API key
+        "402":
+          description: Quota exceeded
+        "429":
+          description: Rate limited
+
+  /sweep:
+    get:
+      summary: Sweep bias values for fixed dimension
+      operationId: getSweep
+      parameters:
+        - $ref: "#/components/parameters/XZplClient"
+        - $ref: "#/components/parameters/XZplClientVersion"
+        - name: d
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 3
+            maximum: 100
+        - name: samples
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 100
+            maximum: 50000
+      responses:
+        "200":
+          description: Sweep results
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SweepResponse"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+
+  parameters:
+    XZplClient:
+      name: X-ZPL-Client
+      in: header
+      required: false
+      description: |
+        Client family slug for attribution (ADR 0002). Examples: `sdk-typescript`, `sdk-python`, `mcp`, `cli`, `gpt-action`, `telegram-bot`, `gha`.
+      schema:
+        type: string
+    XZplClientVersion:
+      name: X-ZPL-Client-Version
+      in: header
+      required: false
+      description: SemVer of the calling client (e.g. `1.0.2`).
+      schema:
+        type: string
+
+  schemas:
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: healthy
+        version:
+          type: string
+      additionalProperties: true
+
+    PlansWrapper:
+      type: object
+      properties:
+        plans:
+          type: array
+          items:
+            $ref: "#/components/schemas/PlanInfo"
+      additionalProperties: true
+
+    PlanInfo:
+      type: object
+      properties:
+        name:
+          type: string
+        max_d:
+          type: integer
+        tokens_per_month:
+          type: integer
+        max_keys:
+          type: integer
+        price_usd:
+          type: number
+        unlimited:
+          type: boolean
+      additionalProperties: true
+
+    ComputeMatrixRequest:
+      type: object
+      required: [matrix, samples]
+      properties:
+        matrix:
+          type: array
+          items:
+            type: array
+            items:
+              type: integer
+              enum: [0, 1]
+          description: Square N×N binary matrix
+        samples:
+          type: integer
+          minimum: 1
+          maximum: 1000000
+
+    ComputeBiasRequest:
+      type: object
+      required: [d, bias]
+      properties:
+        d:
+          type: integer
+          minimum: 3
+          maximum: 100
+        bias:
+          type: number
+          minimum: 0
+          maximum: 1
+        samples:
+          type: integer
+          minimum: 100
+          maximum: 50000
+          default: 1000
+
+    ComputeResponse:
+      type: object
+      properties:
+        d:
+          type: integer
+        bias:
+          type: number
+        p_output:
+          type: number
+        ain:
+          type: number
+        ain_status:
+          type: string
+        deviation:
+          type: number
+        status:
+          type: string
+          description: Categorical status (e.g. STABLE, HIGH_BIAS)
+        samples:
+          type: integer
+        tokens_used:
+          type: integer
+        compute_ms:
+          type: number
+      additionalProperties: true
+
+    SweepResponse:
+      type: object
+      properties:
+        d:
+          type: integer
+        samples:
+          type: integer
+        results:
+          type: array
+          items:
+            $ref: "#/components/schemas/SweepRow"
+        total_tokens:
+          type: integer
+        compute_ms:
+          type: number
+      additionalProperties: true
+
+    SweepRow:
+      type: object
+      properties:
+        bias:
+          type: number
+        p_output:
+          type: number
+        ain:
+          type: number
+        deviation:
+          type: number
+        status:
+          type: string
+
+    EngineError:
+      type: object
+      properties:
+        error:
+          type: string
+        code:
+          type: integer
