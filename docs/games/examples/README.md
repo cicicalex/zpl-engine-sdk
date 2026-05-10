@@ -32,5 +32,7 @@ După ce modifici fișiere `.md` aici, în monorepo **SDK** rulează din rădăc
 | [w4-godot-note.md](./w4-godot-note.md) | Godot comercial / W4 → același flux |
 | [o3de-http-cpp-note.md](./o3de-http-cpp-note.md) | O3DE (C++ server / Gem) |
 | [cryengine-http-cpp-note.md](./cryengine-http-cpp-note.md) | CryEngine / Lumberyard (C++) |
+| [source2-server-http-note.md](./source2-server-http-note.md) | Source 2 (dedicated server) |
+| [custom-engine-c-http-note.md](./custom-engine-c-http-note.md) | Motor propriu C/C++ |
 
 Index documentație: [../README.md](../README.md).
