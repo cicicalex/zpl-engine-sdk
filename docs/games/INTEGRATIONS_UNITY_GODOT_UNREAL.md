@@ -38,6 +38,8 @@
 | **Godot (export Web)** | GDScript / WASM | `HTTPRequest` → BFF | Vezi [godot-web-export-bff-note.md](./examples/godot-web-export-bff-note.md). |
 | **PICO-8** | Lua | rețea limitată | Vezi [pico8-limit-note.md](./examples/pico8-limit-note.md) — de obicei BFF în afara cartușului. |
 | **Stride** | C# | `HttpClient` | Vezi [stride-httpclient-note.md](./examples/stride-httpclient-note.md). |
+| **O3DE** | C++ | HTTP pe **server** / Gem | Vezi [o3de-http-cpp-note.md](./examples/o3de-http-cpp-note.md). |
+| **CryEngine / Lumberyard** | C++ | HTTP pe **server** dedicat | Vezi [cryengine-http-cpp-note.md](./examples/cryengine-http-cpp-note.md). |
 
 Lista nu e exhaustivă: **orice motor** care poate face HTTPS din procesul care deține cheia (sau dintr-un backend lângă el) poate integra ZPL la fel — diferența e doar **codul de legătură** pe care îl scrii tu sau generezi.
 
@@ -161,6 +163,16 @@ Lista nu e exhaustivă: **orice motor** care poate face HTTPS din procesul care 
 
 - **`HttpClient`** pe proces server / serviciu .NET; clientul Stride nu deține cheia ZPL.
 - **Notă:** [examples/stride-httpclient-note.md](./examples/stride-httpclient-note.md).
+
+## O3DE (C++)
+
+- **Gems / componente server:** HTTP (CRT / curl / stack ales) doar pe **dedicated** / headless; vezi nota.
+- **Notă:** [examples/o3de-http-cpp-note.md](./examples/o3de-http-cpp-note.md).
+
+## CryEngine / Lumberyard (C++)
+
+- **Dedicated server** + client HTTP în DLL server; fără cheie în `.pak` client.
+- **Notă:** [examples/cryengine-http-cpp-note.md](./examples/cryengine-http-cpp-note.md).
 
 ## HTTP comun (Unity / Godot / Unreal)
 
