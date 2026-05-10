@@ -34,12 +34,13 @@ All authenticated engine calls (`POST /compute`, etc.) are **rejected without a 
 - [docs/postman/](docs/postman/) — Postman collection + import notes.
 - [docs/OPENAPI_GENERATOR.md](docs/OPENAPI_GENERATOR.md) — optional multi-language client generation.
 - [docs/UNITY.md](docs/UNITY.md) — Unity: server-authoritative pattern (no engine in-player; F2 C# package separate).
+- [docs/games/README.md](docs/games/README.md) — integrări jocuri (toate motoarele), catalog demo web ZPL Main (`zpl_nodeweb`), snippets și registru modele dev.
 - [docs/adr/0001-engine-client-telemetry.md](docs/adr/0001-engine-client-telemetry.md) — usage_log telemetry (engine + DB: Alex only).
 - [docs/adr/0002-x-zpl-client-headers.md](docs/adr/0002-x-zpl-client-headers.md) — `X-ZPL-Client` / `X-ZPL-Client-Version` registry; **implemented** in TypeScript + Python SDKs.
 
 ## CI
 
-GitHub Actions (when this repo is connected to GitHub): [../.github/workflows/zpl-engine-sdk-ci.yml](../.github/workflows/zpl-engine-sdk-ci.yml) at workspace root `C:\Dev`.
+GitHub Actions: [.github/workflows/openapi-pages.yml](.github/workflows/openapi-pages.yml) (OpenAPI public spec on Pages).
 
 ## Changelog and security
 
@@ -48,5 +49,5 @@ GitHub Actions (when this repo is connected to GitHub): [../.github/workflows/zp
 
 ## Related
 
-- Master ecosystem plan: [../ZPL_ENGINE_ECOSYSTEM_MASTER_PLAN.md](../ZPL_ENGINE_ECOSYSTEM_MASTER_PLAN.md)
-- Workspace rules: [../AGENTS.md](../AGENTS.md)
+- Game integration docs (Unity / Godot / Unreal, demo catalog): [docs/games/README.md](docs/games/README.md)
+- Internal ZPL workspace (ecosystem plan, `AGENTS.md`): outside this repo clone — see your org’s monorepo root if applicable.

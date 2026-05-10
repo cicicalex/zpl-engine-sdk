@@ -29,3 +29,4 @@ This document is for **Unity engineers** deciding how to integrate ZPL AIN / sta
 
 - [ADR 0001](./adr/0001-engine-client-telemetry.md) — future `usage_log` attribution on the engine (Alex / Rust).
 - [ADR 0002](./adr/0002-x-zpl-client-headers.md) — `X-ZPL-Client` registry shared across SDKs and channels.
+- [games/README.md](./games/README.md) — docs comune jocuri (Godot/Unreal snippets, catalog demo, gap-uri vs acest fișier în `games/UNITY_ENGINE_GAP.md`).
