@@ -25,5 +25,8 @@ După ce modifici fișiere `.md` aici, în monorepo **SDK** rulează din rădăc
 | [gdevelop-fetch-bff-snippet.md](./gdevelop-fetch-bff-snippet.md) | GDevelop 5 → BFF |
 | [fusion-clickteam-bff-snippet.md](./fusion-clickteam-bff-snippet.md) | Clickteam Fusion → BFF |
 | [unreal-lyra-packaging-note.md](./unreal-lyra-packaging-note.md) | Unreal Lyra + dedicated server |
+| [stencyl-http-bff-snippet.md](./stencyl-http-bff-snippet.md) | Stencyl → BFF |
+| [godot-web-export-bff-note.md](./godot-web-export-bff-note.md) | Godot export Web → BFF |
+| [pico8-limit-note.md](./pico8-limit-note.md) | PICO-8 — limitări rețea |
 
 Index documentație: [../README.md](../README.md).
