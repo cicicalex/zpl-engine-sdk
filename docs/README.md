@@ -11,4 +11,8 @@
 | [postman/](./postman/) | Postman collection |
 | [adr/](./adr/) | Architecture decision records |
 
+## Edits under `docs/games/`
+
+Before a PR: from the **repo root** run `pwsh ./scripts/verify-docs-games.ps1` (same checks as workflow [verify-docs-games.yml](../.github/workflows/verify-docs-games.yml)). If you use a wider workspace with a mirrored `zpl-games/` tree, run your workspace `tools/sync-zpl-games-to-sdk.ps1` first so links and nested `README.md` files (e.g. under `examples/`) stay aligned — see [games/README.md](./games/README.md).
+
 For **npm / PyPI** client usage, start at the repo root [README.md](../README.md) and the package READMEs under `packages/`.
