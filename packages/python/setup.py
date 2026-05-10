@@ -13,13 +13,13 @@ def read_file(filename):
 
 setup(
     name="zeropointlogic",
-    version="1.0.0",
+    version="1.0.4",
     description="Professional Python SDK for Zero Point Logic Engine API",
     long_description=read_file("README.md"),
     long_description_content_type="text/markdown",
     author="Alex Cicic",
     author_email="cicicalex20@gmail.com",
-    url="https://github.com/zeropointlogic/zpl-python-sdk",
+    url="https://github.com/cicicalex/zpl-engine-sdk",
     license="MIT",
     packages=find_packages(exclude=["tests", "examples"]),
     python_requires=">=3.9",
@@ -64,9 +64,9 @@ setup(
         "sdk",
     ],
     project_urls={
-        "Documentation": "https://github.com/zeropointlogic/zpl-python-sdk",
-        "Source Code": "https://github.com/zeropointlogic/zpl-python-sdk",
-        "Issue Tracker": "https://github.com/zeropointlogic/zpl-python-sdk/issues",
-        "Changelog": "https://github.com/zeropointlogic/zpl-python-sdk/releases",
+        "Documentation": "https://github.com/cicicalex/zpl-engine-sdk",
+        "Source Code": "https://github.com/cicicalex/zpl-engine-sdk",
+        "Issue Tracker": "https://github.com/cicicalex/zpl-engine-sdk/issues",
+        "Changelog": "https://github.com/cicicalex/zpl-engine-sdk/releases",
     },
 )

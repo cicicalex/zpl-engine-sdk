@@ -4,6 +4,26 @@ All notable changes to the ZPL Engine SDK monorepo are documented here.
 
 Versioning: **TypeScript** and **Python** package versions in `packages/*` should stay aligned for the same API contract. **zpl-engine-mcp** is released separately from [mcp/engine-mcp](../../mcp/engine-mcp); note compatible engine URLs in MCP release notes.
 
+## [1.0.4] - 2026-05-11
+
+### Python (`zeropointlogic`)
+
+- **Packaging:** `license = "MIT"` (SPDX string) instead of deprecated `license = { text = "MIT" }` for setuptools 77+; removed redundant `License :: OSI Approved :: MIT License` classifier (license field is canonical).
+
+### TypeScript (`@zeropointlogic/sdk`)
+
+- Version bump only — **parity** with Python `1.0.4` (no API changes).
+
+## [1.0.3] - 2026-05-11
+
+### TypeScript (`@zeropointlogic/sdk`)
+
+- Fix npm metadata: `repository`, `homepage`, and `bugs` now point to [github.com/cicicalex/zpl-engine-sdk](https://github.com/cicicalex/zpl-engine-sdk) (previous `zeropointlogic/sdk-ts` URL was 404).
+
+### Python (`zeropointlogic`)
+
+- Fix PyPI `[project.urls]`: Homepage, Repository, Issues, etc. → same monorepo `cicicalex/zpl-engine-sdk`.
+
 ## [1.0.2] - 2026-05-11
 
 ### TypeScript (`@zeropointlogic/sdk`)

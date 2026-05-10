@@ -35,8 +35,8 @@ pip install zeropointlogic[pandas]
 
 ### Development Install
 ```bash
-git clone https://github.com/zeropointlogic/zpl-python-sdk.git
-cd zpl-python-sdk
+git clone https://github.com/cicicalex/zpl-engine-sdk.git
+cd zpl-engine-sdk/packages/python
 pip install -e ".[dev]"
 ```
 
@@ -488,8 +488,8 @@ MIT License — See LICENSE file for details.
 
 ## Support
 
-- **Documentation**: https://github.com/zeropointlogic/zpl-python-sdk
-- **Issues**: https://github.com/zeropointlogic/zpl-python-sdk/issues
+- **Documentation**: https://github.com/cicicalex/zpl-engine-sdk
+- **Issues**: https://github.com/cicicalex/zpl-engine-sdk/issues
 - **Email**: support@zeropointlogic.io
 - **Discord**: https://discord.gg/zeropointlogic
 

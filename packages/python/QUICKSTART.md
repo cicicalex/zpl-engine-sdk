@@ -259,8 +259,8 @@ client = ZPLClient(api_key=api_key)
 
 ## Support
 
-- **Docs**: https://github.com/zeropointlogic/zpl-python-sdk
-- **Issues**: https://github.com/zeropointlogic/zpl-python-sdk/issues
+- **Docs**: https://github.com/cicicalex/zpl-engine-sdk
+- **Issues**: https://github.com/cicicalex/zpl-engine-sdk/issues
 - **Email**: support@zeropointlogic.io
 
 Happy analyzing!

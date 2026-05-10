@@ -4,17 +4,16 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "zeropointlogic"
-version = "1.0.2"
+version = "1.0.4"
 description = "Professional Python SDK for Zero Point Logic Engine API"
 readme = "README.md"
-license = {text = "MIT"}
+license = "MIT"
 authors = [{name = "Alex Cicic", email = "cicicalex20@gmail.com"}]
 keywords = ["zpl", "zeropointlogic", "api", "neutrality", "bias", "stability", "crypto", "finance"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "Intended Audience :: Financial and Insurance Industry",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
@@ -42,11 +41,11 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/zeropointlogic/zpl-python-sdk"
-Documentation = "https://github.com/zeropointlogic/zpl-python-sdk"
-Repository = "https://github.com/zeropointlogic/zpl-python-sdk.git"
-Issues = "https://github.com/zeropointlogic/zpl-python-sdk/issues"
-Changelog = "https://github.com/zeropointlogic/zpl-python-sdk/releases"
+Homepage = "https://github.com/cicicalex/zpl-engine-sdk"
+Documentation = "https://github.com/cicicalex/zpl-engine-sdk"
+Repository = "https://github.com/cicicalex/zpl-engine-sdk.git"
+Issues = "https://github.com/cicicalex/zpl-engine-sdk/issues"
+Changelog = "https://github.com/cicicalex/zpl-engine-sdk/releases"
 
 [tool.black]
 line-length = 110

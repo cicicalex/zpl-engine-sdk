@@ -1,6 +1,6 @@
 {
   "name": "@zeropointlogic/sdk",
-  "version": "1.0.2",
+  "version": "1.0.4",
   "description": "Official TypeScript SDK for the ZPL Engine API - AI Neutrality Index calculations for crypto, forex, commodities, and game economy analysis",
   "type": "module",
   "main": "./dist/index.js",
@@ -45,12 +45,13 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/zeropointlogic/sdk-ts"
+    "url": "git+https://github.com/cicicalex/zpl-engine-sdk.git",
+    "directory": "packages/typescript"
   },
   "bugs": {
-    "url": "https://github.com/zeropointlogic/sdk-ts/issues"
+    "url": "https://github.com/cicicalex/zpl-engine-sdk/issues"
   },
-  "homepage": "https://github.com/zeropointlogic/sdk-ts",
+  "homepage": "https://github.com/cicicalex/zpl-engine-sdk#readme",
   "devDependencies": {
     "@types/node": "^20.0.0",
     "typescript": "^5.3.0",

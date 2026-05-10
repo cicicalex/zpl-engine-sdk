@@ -379,8 +379,8 @@ Total:            ~2950 LOC
 
 ## Support & Contact
 
-- **Repository**: https://github.com/zeropointlogic/zpl-python-sdk
-- **Issues**: https://github.com/zeropointlogic/zpl-python-sdk/issues
+- **Repository**: https://github.com/cicicalex/zpl-engine-sdk
+- **Issues**: https://github.com/cicicalex/zpl-engine-sdk/issues
 - **Email**: support@zeropointlogic.io
 - **Author**: Alex Cicic (cicicalex20@gmail.com)
 
