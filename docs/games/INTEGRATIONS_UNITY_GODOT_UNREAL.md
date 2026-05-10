@@ -23,11 +23,13 @@
 | **GameMaker** | GML | `http_request` | Preferă job server sau extensie care nu expune cheia în client. |
 | **Cocos** (Creator / etc.) | TypeScript / C++ / Lua | `fetch`, `XMLHttpRequest`, native HTTP | Poate folosi același pattern ca web BFF dacă ești în TS. |
 | **MonoGame / FNA** | C# | `HttpClient` | La fel ca Unity; vezi [monogame-httpclient-note](./examples/monogame-httpclient-note.md). |
-| **Ren'Py** | Python | `requests`, `urllib` | Cheia tot pe server; nu în distributiv vizibil jucătorului. |
-| **Love2D** | Lua | `https` (luasec) sau serviciu separat | Adesea mai simplu: microserviciu Node/Python cu SDK. |
+| **Ren'Py** | Python / Ren'Py DSL | `renpy.fetch`, BFF | Vezi [renpy-http-bridge-snippet.md](./examples/renpy-http-bridge-snippet.md); fără cheie în `.rpy` livrate. |
+| **Love2D** | Lua | BFF / microserviciu | Vezi [love2d-bridge-snippet.md](./examples/love2d-bridge-snippet.md); TLS în Lua e sensibil. |
 | **Phaser / Pixi / Vite** | TypeScript | `fetch` către **BFF** | Cheia doar pe server; vezi snippet web. |
 | **Flame / Flutter** | Dart | `http` / `dio` → **BFF** | Mobil + web; fără cheie în `--dart-define` public. |
 | **Roblox** | Luau | `HttpService:RequestAsync` → **BFF** pe allowlist | Cheia ZPL doar pe serverul tău, nu în experience. |
+| **.NET MAUI** | C# | `HttpClient` | Vezi [dotnet-maui-http-note](./examples/dotnet-maui-http-note.md). |
+| **Redot** | GDScript, C# | ca Godot | Vezi [redot-godot-note](./examples/redot-godot-note.md). |
 
 Lista nu e exhaustivă: **orice motor** care poate face HTTPS din procesul care deține cheia (sau dintr-un backend lângă el) poate integra ZPL la fel — diferența e doar **codul de legătură** pe care îl scrii tu sau generezi.
 
@@ -92,6 +94,26 @@ Lista nu e exhaustivă: **orice motor** care poate face HTTPS din procesul care 
 
 - **`HttpClient`** identic ca Unity headless; evită duplicarea — urmează snippet-ul Unity.
 - **Notă scurtă:** [examples/monogame-httpclient-note.md](./examples/monogame-httpclient-note.md).
+
+## Ren'Py
+
+- **`renpy.fetch`** sau BFF extern; nu include cheia ZPL în build-ul distribuit jucătorilor.
+- **Snippet:** [examples/renpy-http-bridge-snippet.md](./examples/renpy-http-bridge-snippet.md).
+
+## Love2D (LÖVE)
+
+- Preferă **BFF** / microserviciu; TLS în Lua necesită stack ales cu grijă.
+- **Snippet:** [examples/love2d-bridge-snippet.md](./examples/love2d-bridge-snippet.md).
+
+## .NET MAUI
+
+- **`HttpClient`** + permisiuni mobile; cheia doar pe server / BFF.
+- **Notă:** [examples/dotnet-maui-http-note.md](./examples/dotnet-maui-http-note.md).
+
+## Redot
+
+- Același flux ca **Godot 4** pentru apeluri HTTP server-side.
+- **Notă:** [examples/redot-godot-note.md](./examples/redot-godot-note.md).
 
 ## HTTP comun (Unity / Godot / Unreal)
 

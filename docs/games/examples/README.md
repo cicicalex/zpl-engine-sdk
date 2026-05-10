@@ -16,5 +16,9 @@ După ce modifici fișiere `.md` aici, în monorepo **SDK** rulează din rădăc
 | [flame-dart-http-snippet.md](./flame-dart-http-snippet.md) | Flame / Flutter (Dart → BFF) |
 | [roblox-httpservice-snippet.md](./roblox-httpservice-snippet.md) | Roblox (Luau `HttpService`) |
 | [monogame-httpclient-note.md](./monogame-httpclient-note.md) | MonoGame / FNA → vezi Unity |
+| [renpy-http-bridge-snippet.md](./renpy-http-bridge-snippet.md) | Ren'Py (`renpy.fetch` / BFF) |
+| [love2d-bridge-snippet.md](./love2d-bridge-snippet.md) | Love2D (BFF / TLS) |
+| [dotnet-maui-http-note.md](./dotnet-maui-http-note.md) | .NET MAUI → vezi Unity |
+| [redot-godot-note.md](./redot-godot-note.md) | Redot → vezi Godot 4 |
 
 Index documentație: [../README.md](../README.md).
