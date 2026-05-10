@@ -15,7 +15,7 @@ Documentație pentru Alex, agenți AI (Claude, Cursor) și developeri care integ
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | Straturi: simulare joc → observații → API → motor |
 | [SDK_VS_HTTP.md](./SDK_VS_HTTP.md) | Când `@zeropointlogic/sdk` / `zeropointlogic` vs `fetch`/`HTTPRequest` direct |
 | [INTEGRATIONS_UNITY_GODOT_UNREAL.md](./INTEGRATIONS_UNITY_GODOT_UNREAL.md) | Matrice motoare, Unity/Godot/Unreal + HTTP comun + linkuri snippets |
-| [UNITY_ENGINE_GAP.md](./UNITY_ENGINE_GAP.md) | Ce acoperă `docs/UNITY.md` vs gap-uri |
+| [UNITY_ENGINE_GAP.md](./UNITY_ENGINE_GAP.md) | Ce acoperă [UNITY.md](../UNITY.md) vs gap-uri |
 | [DEMO_CATALOG.md](./DEMO_CATALOG.md) | Catalog slug-uri demo web (`zpl_nodeweb`) + poziționare |
 | [DEV_GAME_MODELS.md](./DEV_GAME_MODELS.md) | Registru șablon pentru modele în dev (completat de tine) |
 | [GEN_ENGINE_CROSSWALK.md](./GEN_ENGINE_CROSSWALK.md) | Ghid gen gameplay ↔ pattern integrare (D3) |
@@ -28,4 +28,4 @@ Documentație pentru Alex, agenți AI (Claude, Cursor) și developeri care integ
 
 - SDK monorepo: [../../README.md](../../README.md), [UNITY.md](../UNITY.md)
 - OpenAPI public (după Pages): vezi [GITHUB_PAGES.md](../GITHUB_PAGES.md)
-- Reguli workspace (repo ZPL mai larg): fișierul `AGENTS.md` din workspace-ul tău local; pe GitHub public poate lipsi — respectă politica proiectului.
+- Reguli workspace (repo ZPL mai larg): fișierul `AGENTS.md` din workspace-ul tău local; pe GitHub public poate lipsi - respectă politica proiectului.

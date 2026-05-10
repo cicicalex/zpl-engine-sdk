@@ -1,4 +1,4 @@
-# Unity — ce acoperă `UNITY.md` vs ce lipsește în `docs/games`
+# Unity — ce acoperă `UNITY.md` vs ce lipsește în `zpl-games`
 
 Sursă canonică arhitectură: [../UNITY.md](../UNITY.md) (F1). Acest fișier evită duplicarea și marchează **gap-uri** utile pentru implementatori.
 

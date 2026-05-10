@@ -22,4 +22,4 @@
 
 ## Ce **nu** face SDK-ul
 
-- **Nu** include device flow / login (la fel ca Stripe SDK). Cheia vine din dashboard / `zpl login` / MCP setup — vezi [README.md](../../README.md) secțiunea *Getting an API key*.
+- **Nu** include device flow / login (la fel ca Stripe SDK). Cheia vine din dashboard / `zpl login` / MCP setup — vezi [../../README.md](../../README.md) secțiunea *Getting an API key*.

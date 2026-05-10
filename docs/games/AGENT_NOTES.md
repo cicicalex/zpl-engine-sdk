@@ -24,12 +24,12 @@ Scop: același **model mental** pentru toți agenții care lucrează în workspa
 
 | Zonă | Cine |
 |------|------|
-| `docs/games/DEMO_CATALOG.md` | Sursa de adevăr pentru slug-uri demo web; nu inventa rute noi fără blueprint site. |
+| `DEMO_CATALOG.md` (acest folder) | Sursa de adevăr pentru slug-uri demo web; pe GitHub același fișier stă în `docs/games/`. Nu inventa rute noi fără blueprint site. |
 | `zpl-engine-sdk` | Agent SDK + docs (Alex approve pentru breaking). |
 | `mcp/engine-mcp`, `zpl-cli` | Agent MCP/CLI — **nu** amesteca schimbări SDK în același PR fără nevoie. |
 | `Proiecte/zpl-engine` (Rust core) | **Doar Alex**. |
 | `zpl_nodeweb` | Agent cu **blueprint**; fără pagini noi fără plan. |
-| `docs/games` (acest folder în repo SDK) | Documentație conceptuală jocuri — PR-uri mici de clarificare OK. |
+| `zpl-games/` (workspace) / `docs/games/` (repo SDK) | Același conținut oglindit; PR-uri publice pe repo-ul SDK. Clarificări mici OK. |
 
 ## Ce poate face „Cursor SDK” vs „Claude MCP/CLI”
 
