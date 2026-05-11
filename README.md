@@ -1,6 +1,6 @@
 # ZPL Engine SDK (monorepo)
 
-Official HTTP clients and API artifacts for **[ZPL Engine](https://engine.zeropointlogic.io)** — AIN / stability analysis **runs on the server**; these packages only call the public HTTPS API.
+Official HTTP clients and API artifacts for **[ZPL Engine](https://zeropointlogic.io)** — AIN / stability analysis **runs on the server**; these packages only call the public HTTPS API. Engine health: [`engine.zeropointlogic.io/health`](https://engine.zeropointlogic.io/health).
 
 ## Packages
 
