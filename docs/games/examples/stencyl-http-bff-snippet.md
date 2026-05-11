@@ -5,7 +5,7 @@
 ## În editor (blocuri)
 
 1. Folosește comportamentul / blocurile de tip **„Request URL”** / **HTTP** (numele depind de versiunea Stencyl) cu **POST** sau **GET** către `https://api.example.com/stencyl-zpl`.
-2. La **răspuns**, parsează JSON-ul doar dacă statusul indică succes; altfel nu inventa `ain` (vezi [INTEGRATIONS_UNITY_GODOT_UNREAL.md](../INTEGRATIONS_UNITY_GODOT_UNREAL.md#http-comun-unity--godot--unreal)).
+2. La **răspuns**, parsează JSON-ul doar dacă statusul indică succes; altfel nu inventa `ain` (vezi [INTEGRATIONS_UNITY_GODOT_UNREAL.md](../INTEGRATIONS_UNITY_GODOT_UNREAL.md#http-comun-unity-godot-unreal)).
 
 ## Modul „Code” (Haxe)
 

@@ -44,6 +44,7 @@
 | **Godot (export Web)** | GDScript / WASM | `HTTPRequest` → BFF | Vezi [godot-web-export-bff-note.md](./examples/godot-web-export-bff-note.md). |
 | **PICO-8** | Lua | rețea limitată | Vezi [pico8-limit-note.md](./examples/pico8-limit-note.md) — de obicei BFF în afara cartușului. |
 | **Stride** | C# | `HttpClient` | Vezi [stride-httpclient-note.md](./examples/stride-httpclient-note.md). |
+| **Flax** | C# | `HttpClient` pe **dedicated** / server-only | Vezi [flax-httpclient-note.md](./examples/flax-httpclient-note.md). |
 | **O3DE** | C++ | HTTP pe **server** / Gem | Vezi [o3de-http-cpp-note.md](./examples/o3de-http-cpp-note.md). |
 | **CryEngine / Lumberyard** | C++ | HTTP pe **server** dedicat | Vezi [cryengine-http-cpp-note.md](./examples/cryengine-http-cpp-note.md). |
 | **Source 2** (Valve) | C++ | HTTP pe **SRCDS** / dedicat | Vezi [source2-server-http-note.md](./examples/source2-server-http-note.md). |
@@ -173,6 +174,11 @@ Lista nu e exhaustivă: **orice motor** care poate face HTTPS din procesul care 
 
 - **`HttpClient`** pe proces server / serviciu .NET; clientul Stride nu deține cheia ZPL.
 - **Notă:** [examples/stride-httpclient-note.md](./examples/stride-httpclient-note.md).
+
+## Flax (C# / .NET)
+
+- **`HttpClient`** în cod **server-only** / dedicated sau BFF .NET; build-ul client Flax nu include cheia ZPL.
+- **Notă:** [examples/flax-httpclient-note.md](./examples/flax-httpclient-note.md).
 
 ## O3DE (C++)
 

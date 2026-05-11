@@ -60,4 +60,4 @@ const data = await r.json();
 
 ## Coduri HTTP
 
-- Vezi tabelul comun în [INTEGRATIONS_UNITY_GODOT_UNREAL.md](../INTEGRATIONS_UNITY_GODOT_UNREAL.md#http-comun-unity--godot--unreal).
+- Vezi tabelul comun în [INTEGRATIONS_UNITY_GODOT_UNREAL.md](../INTEGRATIONS_UNITY_GODOT_UNREAL.md#http-comun-unity-godot-unreal).

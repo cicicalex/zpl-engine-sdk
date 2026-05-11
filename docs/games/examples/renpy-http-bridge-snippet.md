@@ -29,6 +29,6 @@ Verifică în **documentația versiunii** tale Ren'Py semnătura exactă a `renp
 
 - **`init python:` cu `requests` + cheie în fișier .rpy:** risc de leak în build; folosește BFF.
 - **Mod developer:** dezactivează shortcut-uri care sar peste verificări de rețea în release.
-- **Coduri HTTP:** vezi [INTEGRATIONS_UNITY_GODOT_UNREAL.md](../INTEGRATIONS_UNITY_GODOT_UNREAL.md#http-comun-unity--godot--unreal).
+- **Coduri HTTP:** vezi [INTEGRATIONS_UNITY_GODOT_UNREAL.md](../INTEGRATIONS_UNITY_GODOT_UNREAL.md#http-comun-unity-godot-unreal).
 
 OpenAPI: [openapi.yaml](../../openapi.yaml).

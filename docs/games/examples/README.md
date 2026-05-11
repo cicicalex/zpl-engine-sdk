@@ -29,6 +29,7 @@ După ce modifici fișiere `.md` aici, în monorepo **SDK** rulează din rădăc
 | [godot-web-export-bff-note.md](./godot-web-export-bff-note.md) | Godot export Web → BFF |
 | [pico8-limit-note.md](./pico8-limit-note.md) | PICO-8 — limitări rețea |
 | [stride-httpclient-note.md](./stride-httpclient-note.md) | Stride (C#) → vezi Unity |
+| [flax-httpclient-note.md](./flax-httpclient-note.md) | Flax Engine (C# / dedicated) |
 | [w4-godot-note.md](./w4-godot-note.md) | Godot comercial / W4 → același flux |
 | [o3de-http-cpp-note.md](./o3de-http-cpp-note.md) | O3DE (C++ server / Gem) |
 | [cryengine-http-cpp-note.md](./cryengine-http-cpp-note.md) | CryEngine / Lumberyard (C++) |

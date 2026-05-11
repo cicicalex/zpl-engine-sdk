@@ -17,6 +17,6 @@ Scop: în **Construct 3**, apelurile rețea se fac de obicei cu obiectul **AJAX*
 - **Cheia în variabile globale vizibile în export:** oricine deschide DevTools vede valorile; folosește doar token de sesiune emis de serverul tău, nu ZPL.
 - **Cordova / Capacitor:** la fel — apel doar la BFF; cheia ZPL rămâne pe backend.
 
-Coduri HTTP: [INTEGRATIONS_UNITY_GODOT_UNREAL.md](../INTEGRATIONS_UNITY_GODOT_UNREAL.md#http-comun-unity--godot--unreal).
+Coduri HTTP: [INTEGRATIONS_UNITY_GODOT_UNREAL.md](../INTEGRATIONS_UNITY_GODOT_UNREAL.md#http-comun-unity-godot-unreal).
 
 OpenAPI: [openapi.yaml](../../openapi.yaml).

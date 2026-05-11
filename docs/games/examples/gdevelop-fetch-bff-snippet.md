@@ -5,7 +5,7 @@ Scop: **GDevelop** exportă adesea **HTML5 / Web** sau runtime-uri cu acces la r
 ## Pattern recomandat
 
 1. **Extensie „Network request”** (sau echivalent) cu `POST` către `https://api.example.com/gd-zpl` și corp JSON (observații).
-2. **Eveniment la răspuns:** dacă status ≠ succes sau corp invalid, nu afișa scor AIN inventat (vezi [INTEGRATIONS_UNITY_GODOT_UNREAL.md](../INTEGRATIONS_UNITY_GODOT_UNREAL.md#http-comun-unity--godot--unreal)).
+2. **Eveniment la răspuns:** dacă status ≠ succes sau corp invalid, nu afișa scor AIN inventat (vezi [INTEGRATIONS_UNITY_GODOT_UNREAL.md](../INTEGRATIONS_UNITY_GODOT_UNREAL.md#http-comun-unity-godot-unreal)).
 
 ## JavaScript (comportamente personalizate)
 

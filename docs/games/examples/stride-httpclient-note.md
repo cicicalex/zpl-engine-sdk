@@ -10,6 +10,6 @@
 ## Referințe în repo
 
 - [monogame-httpclient-note.md](./monogame-httpclient-note.md) — aceeași familie .NET + `HttpClient`.
-- Coduri HTTP: [INTEGRATIONS_UNITY_GODOT_UNREAL.md](../INTEGRATIONS_UNITY_GODOT_UNREAL.md#http-comun-unity--godot--unreal).
+- Coduri HTTP: [INTEGRATIONS_UNITY_GODOT_UNREAL.md](../INTEGRATIONS_UNITY_GODOT_UNREAL.md#http-comun-unity-godot-unreal).
 
 OpenAPI: [openapi.yaml](../../openapi.yaml).

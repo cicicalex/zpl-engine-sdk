@@ -5,7 +5,7 @@ Scop: în **Fusion**, apelurile HTTPS se fac de obicei prin obiecte de tip **GET
 ## Pattern recomandat
 
 1. **Eveniment:** la momentul potrivit (sfârșit de nivel, buton debug, etc.) trimite **POST JSON** către `https://api.example.com/fusion-zpl` (BFF-ul tău).
-2. **Răspuns:** parsează doar câmpuri publice; la eroare rețea sau HTTP ≠ succes, **nu** inventa `ain` (vezi [INTEGRATIONS_UNITY_GODOT_UNREAL.md](../INTEGRATIONS_UNITY_GODOT_UNREAL.md#http-comun-unity--godot--unreal)).
+2. **Răspuns:** parsează doar câmpuri publice; la eroare rețea sau HTTP ≠ succes, **nu** inventa `ain` (vezi [INTEGRATIONS_UNITY_GODOT_UNREAL.md](../INTEGRATIONS_UNITY_GODOT_UNREAL.md#http-comun-unity-godot-unreal)).
 
 ## Aliniere cu Construct / GDevelop
 

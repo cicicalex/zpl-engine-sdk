@@ -5,7 +5,7 @@ Dacă ai un **runtime custom** (fără Unity/Unreal), modelul ZPL rămâne: **un
 ## Implementare tipică
 
 - **libcurl** (sau **mbedTLS** + stack HTTP propriu) într-un **daemon** / **worker** care rulează lângă simulare.
-- **Thread pool / event loop:** nu bloca bucla principală de tick fără coadă; tratează `401/402/429` ca în [INTEGRATIONS_UNITY_GODOT_UNREAL.md](../INTEGRATIONS_UNITY_GODOT_UNREAL.md#http-comun-unity--godot--unreal).
+- **Thread pool / event loop:** nu bloca bucla principală de tick fără coadă; tratează `401/402/429` ca în [INTEGRATIONS_UNITY_GODOT_UNREAL.md](../INTEGRATIONS_UNITY_GODOT_UNREAL.md#http-comun-unity-godot-unreal).
 
 ## Alternative
 

@@ -55,7 +55,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 ## Capcane
 
 - **`unwrap` pe cheie în client wasm:** compile-time / CI trebuie să excludă acest bin din target-uri wasm.
-- **429 / 401 / 402:** același tabel ca în [INTEGRATIONS_UNITY_GODOT_UNREAL.md](../INTEGRATIONS_UNITY_GODOT_UNREAL.md#http-comun-unity--godot--unreal); backoff pe 429.
+- **429 / 401 / 402:** același tabel ca în [INTEGRATIONS_UNITY_GODOT_UNREAL.md](../INTEGRATIONS_UNITY_GODOT_UNREAL.md#http-comun-unity-godot-unreal); backoff pe 429.
 - **Blocking în sistem Bevy:** dacă apelezi din `System`, preferă **task** Tokio detașat sau canal către thread dedicat ca să nu blochezi scheduler-ul Bevy pe frame.
 
 Documentație canonică arhitectură (F1 Unity, același API): [UNITY.md](../../UNITY.md).

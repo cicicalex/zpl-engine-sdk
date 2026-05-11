@@ -30,6 +30,6 @@ Future<Map<String, dynamic>?> requestZplViaBff(
 
 - **`--dart-define=ZPL_KEY=...` în CI public:** vizibil în istoric; folosește doar pe **build server-side** dacă absolut necesar, altfel exclusiv BFF.
 - **Web target (CanvasKit):** CORS pe BFF; nu expune cheia în `index.html`.
-- **429 / 401 / 402:** propagă mesajul UX fără a inventa `ain` (vezi [INTEGRATIONS_UNITY_GODOT_UNREAL.md](../INTEGRATIONS_UNITY_GODOT_UNREAL.md#http-comun-unity--godot--unreal)).
+- **429 / 401 / 402:** propagă mesajul UX fără a inventa `ain` (vezi [INTEGRATIONS_UNITY_GODOT_UNREAL.md](../INTEGRATIONS_UNITY_GODOT_UNREAL.md#http-comun-unity-godot-unreal)).
 
 OpenAPI (contract corp): [openapi.yaml](../../openapi.yaml).

@@ -35,7 +35,7 @@ local function postObservations(payload)
 end
 ```
 
-Tratează `401/402/429` ca în tabelul comun din [INTEGRATIONS_UNITY_GODOT_UNREAL.md](../INTEGRATIONS_UNITY_GODOT_UNREAL.md#http-comun-unity--godot--unreal).
+Tratează `401/402/429` ca în tabelul comun din [INTEGRATIONS_UNITY_GODOT_UNREAL.md](../INTEGRATIONS_UNITY_GODOT_UNREAL.md#http-comun-unity-godot-unreal).
 
 ## Capcane
 
