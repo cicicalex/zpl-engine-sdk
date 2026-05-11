@@ -12,7 +12,6 @@ import type {
   PlansResponse,
   HealthResponse,
   BinaryMatrix,
-  ComputeRequest,
   RetryPolicy,
 } from './types.js';
 
@@ -140,8 +139,30 @@ export class ZPLClient {
       );
     }
 
-    const payload: ComputeRequest = {
-      matrix,
+    // v2.0 — convert (matrix, samples) to the engine's actual wire shape
+    // (d, bias, samples). v1.x sent {matrix, samples} which the Rust engine
+    // never accepted: every call returned 400 "Failed to deserialize: missing
+    // field `bias`". The SDK had zero working users before v2.0 because of it.
+    //
+    // d = number of rows (matrix is N×N per the validateMatrix contract).
+    // bias = density of 1s across the matrix (sum / total cells). This is
+    // the most natural interpretation of "bias" for a binary input — all 0s
+    // means no positive class (0.0 bias), all 1s means full positive class
+    // (1.0 bias), a balanced 50/50 matrix means 0.5. The engine treats bias
+    // as the probability parameter of the binary input distribution.
+    const d = matrix.length;
+    let ones = 0;
+    for (const row of matrix) {
+      for (const cell of row) {
+        if (cell === 1) ones += 1;
+      }
+    }
+    const total = d * d;
+    const bias = total > 0 ? ones / total : 0;
+
+    const payload: Record<string, unknown> = {
+      d,
+      bias,
       samples,
     };
 

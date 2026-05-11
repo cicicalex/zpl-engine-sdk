@@ -251,12 +251,22 @@ class ZPLClient(BaseZPLClient):
         if samples < 1:
             raise ZPLValidationError("samples must be >= 1")
 
-        payload = {"matrix": matrix, "samples": samples}
+        # v2.0 — convert (matrix, samples) to engine wire shape (d, bias, samples).
+        # v1.x sent {matrix, samples} which Rust engine never accepted: every
+        # call returned 400 "Failed to deserialize: missing field `bias`".
+        # SDK had zero working users before v2.0. See TS client.ts for parity.
+        # bias = density of 1s; matches binary-input distribution parameter.
+        d = len(matrix)
+        ones = sum(1 for row in matrix for cell in row if cell == 1)
+        total = d * d
+        bias = ones / total if total > 0 else 0.0
+
+        payload = {"d": d, "bias": bias, "samples": samples}
         response = self._make_request("POST", "/compute", payload)
 
         return compute_result_from_engine_dict(
             response,
-            matrix_size=len(matrix),
+            matrix_size=d,
             samples=samples,
         )
 
@@ -483,12 +493,18 @@ class AsyncZPLClient(BaseZPLClient):
         if samples < 1:
             raise ZPLValidationError("samples must be >= 1")
 
-        payload = {"matrix": matrix, "samples": samples}
+        # v2.0 — see sync compute() above. Engine expects {d, bias, samples}.
+        d = len(matrix)
+        ones = sum(1 for row in matrix for cell in row if cell == 1)
+        total = d * d
+        bias = ones / total if total > 0 else 0.0
+
+        payload = {"d": d, "bias": bias, "samples": samples}
         response = await self._make_request("POST", "/compute", payload)
 
         return compute_result_from_engine_dict(
             response,
-            matrix_size=len(matrix),
+            matrix_size=d,
             samples=samples,
         )
 

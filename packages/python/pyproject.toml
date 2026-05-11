@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "zeropointlogic"
-version = "1.0.4"
+version = "2.0.0"
 description = "Professional Python SDK for Zero Point Logic Engine API"
 readme = "README.md"
 license = "MIT"
