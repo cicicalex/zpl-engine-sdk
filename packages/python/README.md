@@ -16,6 +16,73 @@ Professional Python client library for the **Zero Point Logic (ZPL) Engine API**
 - **Rich utilities** — Matrix conversion from prices, timeseries, pandas DataFrames
 - **Detailed documentation** — Docstrings, examples, and type information throughout
 
+## v2.0.0 — BREAKING + REQUIRED UPGRADE
+
+v1.x sent `{matrix, samples}` to the engine, which the Rust API rejected
+with `400 Failed to deserialize: missing field 'bias'`. Every single v1.x
+call failed on the wire. v2.0.0 fixes the body shape and is the first
+working release.
+
+**Upgrade immediately:** `pip install -U zeropointlogic`
+
+Public API surface (`client.compute(matrix=..., samples=...)`) is unchanged.
+Under the hood the SDK now derives `d = len(matrix)` and `bias = sum_of_1s
+/ (d * d)` client-side, then posts `{d, bias, samples}` to the engine.
+
+## Step 1 — Get an API key (DO THIS FIRST)
+
+This SDK is a thin HTTP client. It does NOT log you in, register an
+account, or mint a key for you. Calling `client.compute(...)` without a
+valid `zpl_u_…` user key returns `401 Unauthorized` immediately.
+
+You must obtain a key first, by ONE of these three paths:
+
+### 1. Dashboard (recommended for server / app use)
+
+1. Visit **<https://zeropointlogic.io/auth/register>** and create an
+   account. Free plan = 5,000 tokens/month, no credit card.
+2. Verify your email by clicking the link we send.
+3. Open **<https://zeropointlogic.io/dashboard/api-keys>**, click
+   **Create New Key**, give it a name, hit **Generate**.
+4. **Copy the plaintext key now** — the dashboard shows it once.
+   Format: `zpl_u_` + 48 hex chars (54 chars total).
+
+### 2. CLI (local dev)
+
+```bash
+npm install -g zpl-engine-cli
+zpl login
+```
+
+Browser-based device flow; the key lands in `~/.zpl/config.toml`. Export:
+
+```bash
+export ZPL_API_KEY="$(awk -F\" '/api_key/{print $2}' ~/.zpl/config.toml)"
+```
+
+### 3. MCP wizard (Claude Desktop / Cursor / Windsurf)
+
+```bash
+npx zpl-engine-mcp setup
+```
+
+## Step 2 — Pass the key to the SDK
+
+```python
+import os
+from zeropointlogic import ZPLClient
+
+# Preferred — env var for servers + CI
+client = ZPLClient(api_key=os.environ["ZPL_API_KEY"])
+
+# One-off scripts:
+client = ZPLClient(api_key="zpl_u_…")
+```
+
+Treat `zpl_u_…` like an OpenAI / Stripe secret — never embed in client
+code, mobile binaries, or public Jupyter notebooks. Use a real secrets
+manager (AWS SM, Vault, Doppler, …) in production.
+
 ## Installation
 
 ### Basic Install

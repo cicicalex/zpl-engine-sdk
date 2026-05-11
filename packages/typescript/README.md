@@ -12,13 +12,83 @@ Official TypeScript SDK for the [Zero Point Logic Engine API](https://engine.zer
 - **Browser Compatible**: Works in Node.js 18+ and modern browsers
 - **Tree Shakeable**: Only import what you need
 
+## v2.0.0 — BREAKING + REQUIRED UPGRADE
+
+v1.x sent `{matrix, samples}` to the engine, which the Rust API rejected
+with `400 Failed to deserialize: missing field 'bias'`. Every single v1.x
+call failed on the wire. v2.0.0 fixes the body shape and is the first
+working release.
+
+**Upgrade immediately:** `npm install @zeropointlogic/sdk@latest`
+
+Public API surface (`client.compute({ matrix, samples })`) is unchanged.
+Under the hood we now compute `d = matrix.length` and `bias =
+sum_of_1s / (d*d)` and post `{d, bias, samples}` to the engine.
+
 ## Installation
 
 ```bash
 npm install @zeropointlogic/sdk
 ```
 
-**API key:** no built-in login flow (same pattern as Stripe/OpenAI SDKs). Get a `zpl_u_…` key from the [ZPL Main](https://zeropointlogic.io) dashboard (API keys), or bootstrap with **`zpl login`** ([zpl-engine-cli](https://www.npmjs.com/package/zpl-engine-cli)) / **`npx zpl-engine-mcp setup`** ([zpl-engine-mcp](https://www.npmjs.com/package/zpl-engine-mcp)), then pass the key via `process.env.ZPL_API_KEY` or your secret manager.
+## Step 1 — Get an API key (DO THIS FIRST)
+
+This SDK is a thin HTTP client (same shape as Stripe / OpenAI SDKs). It
+does **not** log you in, register an account, or mint a key for you.
+Calling `client.compute(...)` without a valid `zpl_u_…` user key returns
+`401 Unauthorized` immediately.
+
+You must obtain a key first, by ONE of these three paths:
+
+### 1. Dashboard (recommended for server/app use)
+
+1. Go to **<https://zeropointlogic.io/auth/register>** and create an
+   account. Free plan = 5,000 tokens/month, no credit card required.
+2. Verify your email by clicking the link we send (verification gates
+   dashboard access).
+3. Open **<https://zeropointlogic.io/dashboard/api-keys>**
+4. Click **Create New Key**, name it (e.g. `production`), hit **Generate**.
+5. **Copy the plaintext key now** — the dashboard only shows it once.
+   It looks like `zpl_u_<48 hex chars>` (54 chars total).
+
+### 2. CLI (for local dev)
+
+```bash
+npm install -g zpl-engine-cli
+zpl login
+```
+
+Opens a browser device-flow page; after you approve, the key is written
+to `~/.zpl/config.toml`. Export with:
+
+```bash
+export ZPL_API_KEY="$(awk -F\" '/api_key/{print $2}' ~/.zpl/config.toml)"
+```
+
+### 3. MCP wizard (for Claude Desktop / Cursor / Windsurf)
+
+```bash
+npx zpl-engine-mcp setup
+```
+
+Same device-flow; auto-patches all detected MCP client configs.
+
+## Step 2 — Pass the key to the SDK
+
+```ts
+import { ZPLClient } from '@zeropointlogic/sdk';
+
+// Preferred: pull from env (servers + CI)
+const client = new ZPLClient({ apiKey: process.env.ZPL_API_KEY! });
+
+// One-off scripts:
+const client2 = new ZPLClient({ apiKey: 'zpl_u_…' });
+```
+
+> **Browser bundles:** never ship a personal `zpl_u_…` key in a public
+> client bundle. Proxy through your own backend, or mint a short-lived
+> per-request token if you really need browser-side calls. Treat
+> `zpl_u_…` like an OpenAI / Stripe secret.
 
 ## Game backends (Unity, Godot, Unreal, …)
 
