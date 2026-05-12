@@ -4,10 +4,10 @@ info:
   description: |
     Public HTTPS API for AI Neutrality Index (AIN) and related metrics.
     Computation runs on the server; clients send parameters only.
-    Authentication: send the same API key as `Authorization: Bearer <key>` and/or `X-API-Key: <key>` (engine accepts either pattern used by official clients).
+    Authentication: send your user key as `Authorization: Bearer <key>`. The engine returns HTTP 401 with `"Use: Bearer zpl_u_XXXXX"` on any other header — X-API-Key is NOT supported. All official clients (MCP, CLI, SDKs) use Bearer.
 
     **Optional telemetry (ADR 0002):** official clients send `X-ZPL-Client` and `X-ZPL-Client-Version` headers on authenticated calls so traffic can be attributed once the engine persists them. Values are documented under each operation; the engine ignores unknown slugs today.
-  version: "1.0.2"
+  version: "1.0.3"
   contact:
     name: Zero Point Logic
     url: https://zeropointlogic.io
@@ -18,7 +18,6 @@ servers:
 
 security:
   - bearerAuth: []
-  - ApiKeyAuth: []
 
 paths:
   /health:
@@ -118,11 +117,7 @@ components:
     bearerAuth:
       type: http
       scheme: bearer
-      bearerFormat: API key
-    ApiKeyAuth:
-      type: apiKey
-      in: header
-      name: X-API-Key
+      bearerFormat: zpl_u_<48 hex chars> (or zpl_u_mcp_/zpl_u_cli_ wizard-issued variants)
 
   parameters:
     XZplClient:
@@ -147,9 +142,11 @@ components:
       properties:
         status:
           type: string
-          example: healthy
+          example: ok
+          description: Engine health flag. Currently always `"ok"` when reachable.
         version:
           type: string
+          example: "3.1.0"
       additionalProperties: true
 
     PlansWrapper:
@@ -184,16 +181,24 @@ components:
       properties:
         matrix:
           type: array
+          minItems: 3
+          maxItems: 100
           items:
             type: array
+            minItems: 3
+            maxItems: 100
             items:
               type: integer
               enum: [0, 1]
-          description: Square N×N binary matrix
+          description: |
+            Square N×N binary matrix. The engine enforces 3 ≤ N ≤ 100 and
+            returns HTTP 400 `"D must be between 3 and 100"` otherwise.
+            Official SDKs also reject non-square shapes client-side.
         samples:
           type: integer
-          minimum: 1
-          maximum: 1000000
+          minimum: 100
+          maximum: 50000
+          default: 1000
 
     ComputeBiasRequest:
       type: object
