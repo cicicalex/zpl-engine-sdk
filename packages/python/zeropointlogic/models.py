@@ -173,31 +173,55 @@ class PlanInfo:
 class HealthStatus:
     """Engine health status.
 
+    All metric fields are Optional because the engine `/health` endpoint
+    currently returns only `{status, version}` — the latency/uptime/RPS
+    metrics are not yet exposed. Pre-v2.0.1 the SDK defaulted these to 0
+    which rendered as "0.00% uptime, 0ms" in `__str__`, falsely implying
+    the engine was offline. Now we display "n/a" for unknown fields.
+
     Attributes:
-        status: Overall status (up, degraded, down)
-        uptime_percent: Uptime percentage (0-100)
-        response_time_ms: Average response time in milliseconds
-        requests_per_second: Current requests per second
-        error_rate_percent: Error rate percentage (0-100)
-        last_check: ISO timestamp of last health check
-        version: Engine API version
+        status: Overall status (ok / up / degraded / down).
+        version: Engine API version (e.g. "3.1.0").
+        uptime_percent: Uptime percentage (0-100) when reported, else None.
+        response_time_ms: Average response time in ms when reported.
+        requests_per_second: Current RPS when reported.
+        error_rate_percent: Error rate percentage when reported.
+        last_check: ISO timestamp of last health check when reported.
     """
 
-    status: Literal["up", "degraded", "down"]
-    uptime_percent: float
-    response_time_ms: float
-    requests_per_second: float
-    error_rate_percent: float
-    last_check: datetime | str
-    version: str
+    status: str
+    version: str = ""
+    uptime_percent: float | None = None
+    response_time_ms: float | None = None
+    requests_per_second: float | None = None
+    error_rate_percent: float | None = None
+    last_check: datetime | str | None = None
 
     def is_healthy(self) -> bool:
         """Check if engine is healthy.
 
         Returns:
-            True if status is 'up' and uptime > 99%
+            True if status is "up"/"ok" and uptime is either None (not
+            reported) OR >= 99%. Returning True on None preserves the
+            sensible default that "no metric = no problem" for an engine
+            that hasn't shipped metrics yet.
         """
-        return self.status == "up" and self.uptime_percent >= 99.0
+        if self.status not in ("up", "ok"):
+            return False
+        if self.uptime_percent is None:
+            return True
+        return self.uptime_percent >= 99.0
 
     def __str__(self) -> str:
-        return f"HealthStatus({self.status}, {self.uptime_percent:.2f}% uptime, {self.response_time_ms:.0f}ms)"
+        uptime = (
+            f"{self.uptime_percent:.2f}% uptime"
+            if self.uptime_percent is not None
+            else "uptime n/a"
+        )
+        latency = (
+            f"{self.response_time_ms:.0f}ms"
+            if self.response_time_ms is not None
+            else "latency n/a"
+        )
+        ver = f", v{self.version}" if self.version else ""
+        return f"HealthStatus({self.status}{ver}, {uptime}, {latency})"

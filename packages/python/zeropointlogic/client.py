@@ -386,14 +386,17 @@ class ZPLClient(BaseZPLClient):
         """
         response = self._make_request("GET", "/health")
 
+        # v2.0.1 — pass `None` (not 0.0) for metrics the engine doesn't
+        # report so __str__ shows "uptime n/a" instead of the misleading
+        # "0.00% uptime, 0ms".
         return HealthStatus(
             status=response.get("status", "unknown"),
-            uptime_percent=response.get("uptime_percent", 0.0),
-            response_time_ms=response.get("response_time_ms", 0.0),
-            requests_per_second=response.get("requests_per_second", 0.0),
-            error_rate_percent=response.get("error_rate_percent", 0.0),
-            last_check=response.get("last_check", ""),
             version=response.get("version", ""),
+            uptime_percent=response.get("uptime_percent"),
+            response_time_ms=response.get("response_time_ms"),
+            requests_per_second=response.get("requests_per_second"),
+            error_rate_percent=response.get("error_rate_percent"),
+            last_check=response.get("last_check"),
         )
 
     def __enter__(self):
@@ -623,14 +626,15 @@ class AsyncZPLClient(BaseZPLClient):
         """
         response = await self._make_request("GET", "/health")
 
+        # See sync get_health above for the rationale on `None` defaults.
         return HealthStatus(
             status=response.get("status", "unknown"),
-            uptime_percent=response.get("uptime_percent", 0.0),
-            response_time_ms=response.get("response_time_ms", 0.0),
-            requests_per_second=response.get("requests_per_second", 0.0),
-            error_rate_percent=response.get("error_rate_percent", 0.0),
-            last_check=response.get("last_check", ""),
             version=response.get("version", ""),
+            uptime_percent=response.get("uptime_percent"),
+            response_time_ms=response.get("response_time_ms"),
+            requests_per_second=response.get("requests_per_second"),
+            error_rate_percent=response.get("error_rate_percent"),
+            last_check=response.get("last_check"),
         )
 
     async def close(self) -> None:
