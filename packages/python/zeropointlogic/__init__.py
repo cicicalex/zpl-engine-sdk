@@ -12,6 +12,8 @@ from zeropointlogic.models import (
     PlanInfo,
     HealthStatus,
     AIStatusType,
+    BiasLevel,
+    ain_to_bias_level,
 )
 from zeropointlogic.exceptions import (
     ZPLError,

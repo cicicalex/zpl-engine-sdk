@@ -88,9 +88,15 @@ class TestZPLClientValidation(unittest.TestCase):
             self.client._validate_matrix([[0, 1], [1]])
 
     def test_validate_matrix_valid(self):
-        """Test validation of valid matrix."""
+        """Test validation of valid matrix (>=3x3 to match engine constraint)."""
         # Should not raise
-        self.client._validate_matrix([[0, 1], [1, 0]])
+        self.client._validate_matrix([[0, 1, 0], [1, 0, 1], [0, 1, 1]])
+
+    def test_validate_matrix_too_small(self):
+        """Test that 2x2 matrices are rejected client-side (engine requires D>=3)."""
+        with self.assertRaises(ZPLValidationError) as ctx:
+            self.client._validate_matrix([[0, 1], [1, 0]])
+        self.assertIn("at least 3x3", str(ctx.exception))
 
 
 class TestZPLClientCompute(unittest.TestCase):
@@ -109,19 +115,21 @@ class TestZPLClientCompute(unittest.TestCase):
         }
 
         client = ZPLClient(api_key="zpl_test")
-        result = client.compute([[0, 1], [1, 0]], samples=100)
+        result = client.compute([[0, 1, 0], [1, 0, 1], [0, 1, 1]], samples=100)
 
         assert isinstance(result, ComputeResult)
         assert result.ain == 0.75
         assert result.status == "STABLE"
         assert result.tokens_remaining == 999
         assert result.is_stable()
+        # bias_level derived from ain=0.75 -> "low" (band 0.7 <= ain < 0.8)
+        assert result.bias_level == "low"
 
     def test_compute_invalid_samples(self):
         """Test compute with invalid samples."""
         client = ZPLClient(api_key="zpl_test")
         with self.assertRaises(ZPLValidationError):
-            client.compute([[0, 1], [1, 0]], samples=0)
+            client.compute([[0, 1, 0], [1, 0, 1], [0, 1, 1]], samples=0)
 
     @patch("zeropointlogic.client.ZPLClient._make_request")
     def test_batch_compute_success(self, mock_request):
@@ -146,7 +154,10 @@ class TestZPLClientCompute(unittest.TestCase):
         ]
 
         client = ZPLClient(api_key="zpl_test")
-        matrices = [[[0, 1], [1, 0]], [[1, 1], [0, 0]]]
+        matrices = [
+            [[0, 1, 0], [1, 0, 1], [0, 1, 1]],
+            [[1, 1, 0], [0, 0, 1], [1, 0, 1]],
+        ]
         results = client.batch_compute(matrices, samples=100)
 
         assert len(results) == 2

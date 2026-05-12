@@ -108,6 +108,14 @@ export function createRandomMatrix(n: number, seed?: number): BinaryMatrix {
 
 /**
  * Validate a binary matrix
+ *
+ * Engine constraints (verified against engine 3.1.0):
+ *   - shape must be square N x N
+ *   - 3 <= N <= 100  (engine returns HTTP 400 "D must be between 3 and 100"
+ *     when violated; we fail fast client-side so the user sees a clear
+ *     ZPLValidationError instead of a confusing API error)
+ *   - every cell must be 0 or 1 (binary)
+ *
  * @param matrix - Matrix to validate
  * @throws {ZPLValidationError} if matrix is invalid
  */
@@ -118,6 +126,17 @@ export function validateMatrix(matrix: BinaryMatrix): void {
 
   const size = matrix.length;
 
+  if (size < 3) {
+    throw new ZPLValidationError(
+      `Matrix must be at least 3x3 (got ${size}x${size}). The engine requires dimension >= 3.`
+    );
+  }
+  if (size > 100) {
+    throw new ZPLValidationError(
+      `Matrix must be at most 100x100 (got ${size}x${size}). The engine rejects dimension > 100; upgrade plan if you need higher d.`
+    );
+  }
+
   for (let i = 0; i < matrix.length; i++) {
     if (!Array.isArray(matrix[i])) {
       throw new ZPLValidationError(`Row ${i} is not an array`);
@@ -125,7 +144,7 @@ export function validateMatrix(matrix: BinaryMatrix): void {
 
     if (matrix[i].length !== size) {
       throw new ZPLValidationError(
-        `Row ${i} has ${matrix[i].length} elements, expected ${size}`
+        `Matrix must be square: ${size} rows but row ${i} has ${matrix[i].length} columns`
       );
     }
 

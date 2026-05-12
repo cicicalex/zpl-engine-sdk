@@ -259,6 +259,13 @@ def get_status_color(status: AIStatusType) -> str:
 def validate_matrix(matrix: list[list[int]]) -> tuple[bool, str]:
     """Validate that a matrix is properly formatted.
 
+    Engine constraints (verified against engine 3.1.0):
+      - shape must be square N x N
+      - 3 <= N <= 100  (engine returns HTTP 400 "D must be between 3 and 100"
+        when violated; we fail fast client-side so the user sees a clear
+        ZPLValidationError instead of a confusing API error)
+      - every cell must be 0 or 1 (binary)
+
     Args:
         matrix: Matrix to validate
 
@@ -271,9 +278,28 @@ def validate_matrix(matrix: list[list[int]]) -> tuple[bool, str]:
     if not isinstance(matrix, list):
         return False, "Matrix must be a list"
 
+    n = len(matrix)
+    if n < 3:
+        return False, (
+            f"Matrix must be at least 3x3 (got {n}x{n}). The engine requires "
+            "dimension >= 3."
+        )
+    if n > 100:
+        return False, (
+            f"Matrix must be at most 100x100 (got {n}x{n}). The engine "
+            "rejects dimension > 100; upgrade plan if you need higher d."
+        )
+
     row_lengths = set(len(row) for row in matrix)
     if len(row_lengths) > 1:
         return False, f"All rows must have same length, got {row_lengths}"
+
+    # Square check — must equal N
+    (only_len,) = row_lengths
+    if only_len != n:
+        return False, (
+            f"Matrix must be square: {n} rows but rows have {only_len} columns"
+        )
 
     for i, row in enumerate(matrix):
         if not isinstance(row, list):

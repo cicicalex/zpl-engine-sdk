@@ -94,8 +94,8 @@ class TestValidateMatrix(unittest.TestCase):
     """Test validate_matrix function."""
 
     def test_valid_matrix(self):
-        """Test validation of valid matrix."""
-        is_valid, msg = validate_matrix([[0, 1], [1, 0]])
+        """Test validation of valid matrix (>=3x3 to satisfy engine constraint)."""
+        is_valid, msg = validate_matrix([[0, 1, 0], [1, 0, 1], [0, 1, 1]])
         assert is_valid
         assert msg == ""
 
@@ -104,15 +104,35 @@ class TestValidateMatrix(unittest.TestCase):
         is_valid, msg = validate_matrix([])
         assert not is_valid
 
+    def test_too_small_matrix(self):
+        """Test that 2x2 matrices are rejected (engine requires D>=3)."""
+        is_valid, msg = validate_matrix([[0, 1], [1, 0]])
+        assert not is_valid
+        assert "at least 3x3" in msg
+
+    def test_too_large_matrix(self):
+        """Test that >100x100 matrices are rejected (engine caps D at 100)."""
+        big = [[0] * 101 for _ in range(101)]
+        is_valid, msg = validate_matrix(big)
+        assert not is_valid
+        assert "at most 100x100" in msg
+
+    def test_non_square_matrix(self):
+        """Test that non-square matrices are rejected (engine requires square)."""
+        # 3 rows but 4 columns
+        is_valid, msg = validate_matrix([[0, 1, 0, 1], [1, 0, 1, 0], [0, 1, 0, 1]])
+        assert not is_valid
+        assert "square" in msg.lower()
+
     def test_inconsistent_rows(self):
-        """Test validation of inconsistent rows."""
-        is_valid, msg = validate_matrix([[0, 1], [1]])
+        """Test validation of inconsistent row lengths."""
+        is_valid, msg = validate_matrix([[0, 1, 0], [1, 0], [0, 1, 0]])
         assert not is_valid
         assert "same length" in msg.lower()
 
     def test_invalid_values(self):
         """Test validation with invalid values."""
-        is_valid, msg = validate_matrix([[0, 2]])
+        is_valid, msg = validate_matrix([[0, 2, 0], [1, 0, 1], [0, 1, 1]])
         assert not is_valid
         assert "must be 0 or 1" in msg
 

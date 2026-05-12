@@ -13,6 +13,25 @@ AIStatusType = Literal[
     "CRITICAL_BIAS",
 ]
 
+BiasLevel = Literal["none", "low", "moderate", "high", "critical"]
+
+
+def ain_to_bias_level(ain: float) -> BiasLevel:
+    """Convert AIN score (0-1) into a bias-level classification.
+
+    Mirrors `ainToBiasLevel` in the TypeScript SDK so users get the same
+    label whichever language they choose.
+    """
+    if ain >= 0.8:
+        return "none"
+    if ain >= 0.7:
+        return "low"
+    if ain >= 0.5:
+        return "moderate"
+    if ain >= 0.3:
+        return "high"
+    return "critical"
+
 
 @dataclass
 class ComputeResult:
@@ -68,6 +87,15 @@ class ComputeResult:
             True if status contains BIAS
         """
         return "BIAS" in self.status
+
+    @property
+    def bias_level(self) -> BiasLevel:
+        """Bias-level classification derived from `ain`.
+
+        Mirrors `biasLevel` on the TypeScript ComputeResult so cross-language
+        code can switch on the same set of labels.
+        """
+        return ain_to_bias_level(self.ain)
 
     def __str__(self) -> str:
         return f"ComputeResult(ain={self.ain:.3f}, status={self.status}, tokens={self.tokens_remaining} left)"
