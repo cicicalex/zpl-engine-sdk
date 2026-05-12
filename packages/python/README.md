@@ -512,10 +512,10 @@ Check engine health and performance.
 All API requests require authentication via the `X-API-Key` header:
 
 ```
-X-API-Key: zpl_s_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+X-API-Key: zpl_u_<48_hex_digits_from_dashboard>
 ```
 
-The SDK automatically includes this header. Obtain an API key at:
+Use a **user** API key (`zpl_u_…`) from the dashboard — not a service key (`zpl_s_…`, server-side only). The SDK sends this header on authenticated calls. Obtain a key at:
 https://zeropointlogic.io/dashboard/api-keys
 
 ## Testing

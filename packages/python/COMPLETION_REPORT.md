@@ -150,7 +150,7 @@ The Zero Point Logic Engine Python SDK has been fully implemented as a professio
 ## Package Structure
 
 ```
-zpl-python-sdk/
+packages/python/
 ├── zeropointlogic/              # Main package (1,385 LOC)
 │   ├── __init__.py              # Public API exports
 │   ├── client.py                # Sync + async clients (750 LOC)
@@ -198,7 +198,7 @@ matrix_from_prices, matrix_from_timeseries, matrix_from_dataframe, normalize_mat
 ```python
 from zeropointlogic import ZPLClient, matrix_from_prices
 
-client = ZPLClient(api_key="zpl_s_xxx")
+client = ZPLClient(api_key="zpl_u_xxx")
 prices = [100, 105, 102, 110]
 matrix = matrix_from_prices(prices, window=2)
 result = client.compute(matrix=matrix, samples=1000)
@@ -211,7 +211,7 @@ import asyncio
 from zeropointlogic import AsyncZPLClient
 
 async def main():
-    async with AsyncZPLClient(api_key="zpl_s_xxx") as client:
+    async with AsyncZPLClient(api_key="zpl_u_xxx") as client:
         result = await client.compute(matrix=[[0,1],[1,0]], samples=500)
         print(result.ain)
 
@@ -236,7 +236,7 @@ The SDK is ready for:
 
 2. **Integration into Finance or Main apps**
    ```bash
-   pip install -e /path/to/zpl-python-sdk
+   pip install -e path/to/zpl-engine-sdk/packages/python
    ```
 
 3. **Update Engine API docs** to reference this SDK

@@ -12,7 +12,7 @@ pip install zeropointlogic
 
 1. Visit https://zeropointlogic.io/dashboard
 2. Navigate to API Keys section
-3. Create new key (format: `zpl_s_xxx`)
+3. Create new key (user key: `zpl_u_` + 48 hex characters from the dashboard)
 4. Copy and save securely
 
 ## Your First Request
@@ -21,7 +21,7 @@ pip install zeropointlogic
 from zeropointlogic import ZPLClient
 
 # Initialize client
-client = ZPLClient(api_key="zpl_s_your_key_here")
+client = ZPLClient(api_key="zpl_u_your_key_here")
 
 # Create a binary matrix (0s and 1s only)
 matrix = [
@@ -91,7 +91,7 @@ result = client.compute(matrix=matrix, samples=500)
 ```python
 from zeropointlogic import ZPLClient
 
-client = ZPLClient(api_key="zpl_s_xxx")
+client = ZPLClient(api_key="zpl_u_xxx")
 
 # Check usage
 usage = client.get_usage()
@@ -115,7 +115,7 @@ print(f"Uptime: {health.uptime_percent:.2f}%")
 ```python
 from zeropointlogic import ZPLClient, ZPLAuthError, ZPLQuotaError
 
-client = ZPLClient(api_key="zpl_s_xxx")
+client = ZPLClient(api_key="zpl_u_xxx")
 
 try:
     result = client.compute(matrix=[[0, 1], [1, 0]], samples=1000)
@@ -134,7 +134,7 @@ import asyncio
 from zeropointlogic import AsyncZPLClient
 
 async def main():
-    async with AsyncZPLClient(api_key="zpl_s_xxx") as client:
+    async with AsyncZPLClient(api_key="zpl_u_xxx") as client:
         result = await client.compute(
             matrix=[[0, 1], [1, 0]],
             samples=1000
@@ -150,7 +150,7 @@ asyncio.run(main())
 ```python
 from zeropointlogic import ZPLClient, matrix_from_prices
 
-client = ZPLClient(api_key="zpl_s_xxx")
+client = ZPLClient(api_key="zpl_u_xxx")
 
 # Simulate BTC prices (in production, fetch from API)
 prices = [45000, 45500, 44800, 46200, 45900, 47100]
@@ -164,7 +164,7 @@ print(f"BTC bias: {result.ain:.3f} - {result.status}")
 ```python
 from zeropointlogic import ZPLClient, normalize_matrix
 
-client = ZPLClient(api_key="zpl_s_xxx")
+client = ZPLClient(api_key="zpl_u_xxx")
 
 # Item rarity scores
 items = [10, 85, 45, 92, 28, 73, 15, 88, 50, 30]
@@ -182,16 +182,7 @@ else:
 
 ## API Plans
 
-| Plan | Tokens/Month | Cost |
-|------|--------------|------|
-| Free | 100 | Free |
-| Basic | 10,000 | €9/mo |
-| Pro | 50,000 | €27/mo |
-| GamePro | 150,000 | €63/mo |
-| Studio | 500,000 | €137/mo |
-| Agent | 2,000,000 | €183/mo |
-| Enterprise | 10,000,000 | €459/mo |
-| XL | Unlimited | €919/mo |
+Current limits and prices are defined on the engine; see **[zeropointlogic.io/pricing](https://zeropointlogic.io/pricing)**. Typical tiers (tokens/month, order of magnitude): Free 5k → Basic 10k → Pro 50k → GamePro 150k → Studio 500k → Agent 2M → Enterprise 10M → Enterprise XL 50M.
 
 ## Status Values
 
@@ -223,7 +214,7 @@ health.is_healthy()                # Check if up and >99% uptime
 ## Environment Variables
 
 ```bash
-export ZPL_API_KEY="zpl_s_your_key_here"
+export ZPL_API_KEY="zpl_u_your_key_here"
 ```
 
 Then use in code:
@@ -236,7 +227,7 @@ client = ZPLClient(api_key=api_key)
 ## Common Issues
 
 ### "Invalid API key"
-- Check your API key format (should start with `zpl_s_`)
+- Check your API key format (dashboard keys start with `zpl_u_`; `zpl_s_` is for trusted servers only)
 - Verify it hasn't been rotated/revoked
 - Ensure no whitespace around the key
 
@@ -252,7 +243,7 @@ client = ZPLClient(api_key=api_key)
 
 ## Next Steps
 
-1. Read the full README: `/sessions/gifted-sharp-ritchie/mnt/Dev/Proiecte/zpl-python-sdk/README.md`
+1. Read the package [README.md](README.md)
 2. Explore examples: `examples/crypto_bias.py`, `examples/game_economy.py`
 3. Run tests: `pytest tests/`
 4. Check API status: `client.get_health()`

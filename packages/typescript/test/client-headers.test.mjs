@@ -23,7 +23,7 @@ test('ZPLClient sends ADR 0002 headers by default', async () => {
   };
 
   const client = new ZPLClient({
-    apiKey: 'zpl_u_placeholder_not_a_real_key',
+    apiKey: 'zpl_u_a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6',
     fetch: fetchMock,
   });
   await client.getHealth();
@@ -43,7 +43,7 @@ test('ZPLClient allows overriding ADR 0002 headers', async () => {
   };
 
   const client = new ZPLClient({
-    apiKey: 'zpl_u_placeholder_not_a_real_key',
+    apiKey: 'zpl_u_a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6',
     fetch: fetchMock,
     xZplClient: 'custom-bridge',
     xZplClientVersion: '9.8.7',

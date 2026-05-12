@@ -21,8 +21,8 @@ class TestZPLClientInit(unittest.TestCase):
 
     def test_init_valid_api_key(self):
         """Test initialization with valid API key."""
-        client = ZPLClient(api_key="zpl_test123")
-        assert client.api_key == "zpl_test123"
+        client = ZPLClient(api_key="zpl_u_test_a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6")
+        assert client.api_key == "zpl_u_test_a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6"
         assert client.base_url == "https://engine.zeropointlogic.io"
 
     def test_init_empty_api_key(self):
@@ -32,13 +32,13 @@ class TestZPLClientInit(unittest.TestCase):
 
     def test_init_custom_base_url(self):
         """Test initialization with custom base URL."""
-        client = ZPLClient(api_key="zpl_test", base_url="http://localhost:8000/")
+        client = ZPLClient(api_key="zpl_u_test_a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6", base_url="http://localhost:8000/")
         assert client.base_url == "http://localhost:8000"
 
     def test_init_timeout_and_retries(self):
         """Test initialization with custom timeout and retries."""
         client = ZPLClient(
-            api_key="zpl_test", timeout=60, max_retries=5, backoff_factor=1.0
+            api_key="zpl_u_test_a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6", timeout=60, max_retries=5, backoff_factor=1.0
         )
         assert client.timeout == 60
         assert client.max_retries == 5
@@ -49,7 +49,7 @@ class TestZPLClientHeaders(unittest.TestCase):
     """ADR 0002 optional telemetry headers."""
 
     def test_default_zpl_client_headers(self):
-        client = ZPLClient(api_key="zpl_test")
+        client = ZPLClient(api_key="zpl_u_test_a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6")
         h = client._get_headers()
         self.assertEqual(h["X-ZPL-Client"], ZPL_SDK_CLIENT_TYPE)
         self.assertEqual(h["X-ZPL-Client"], "sdk-python")
@@ -57,7 +57,7 @@ class TestZPLClientHeaders(unittest.TestCase):
 
     def test_override_zpl_client_headers(self):
         client = ZPLClient(
-            api_key="zpl_test",
+            api_key="zpl_u_test_a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6",
             x_zpl_client="custom-bridge",
             x_zpl_client_version="9.8.7",
         )
@@ -70,7 +70,7 @@ class TestZPLClientValidation(unittest.TestCase):
     """Test input validation."""
 
     def setUp(self):
-        self.client = ZPLClient(api_key="zpl_test")
+        self.client = ZPLClient(api_key="zpl_u_test_a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6")
 
     def test_validate_matrix_empty(self):
         """Test validation of empty matrix."""
@@ -114,7 +114,7 @@ class TestZPLClientCompute(unittest.TestCase):
             "tokens_remaining": 999,
         }
 
-        client = ZPLClient(api_key="zpl_test")
+        client = ZPLClient(api_key="zpl_u_test_a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6")
         result = client.compute([[0, 1, 0], [1, 0, 1], [0, 1, 1]], samples=100)
 
         assert isinstance(result, ComputeResult)
@@ -127,7 +127,7 @@ class TestZPLClientCompute(unittest.TestCase):
 
     def test_compute_invalid_samples(self):
         """Test compute with invalid samples."""
-        client = ZPLClient(api_key="zpl_test")
+        client = ZPLClient(api_key="zpl_u_test_a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6")
         with self.assertRaises(ZPLValidationError):
             client.compute([[0, 1, 0], [1, 0, 1], [0, 1, 1]], samples=0)
 
@@ -153,7 +153,7 @@ class TestZPLClientCompute(unittest.TestCase):
             },
         ]
 
-        client = ZPLClient(api_key="zpl_test")
+        client = ZPLClient(api_key="zpl_u_test_a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6")
         matrices = [
             [[0, 1, 0], [1, 0, 1], [0, 1, 1]],
             [[1, 1, 0], [0, 0, 1], [1, 0, 1]],
@@ -181,7 +181,7 @@ class TestZPLClientMethods(unittest.TestCase):
             "last_reset": "2026-04-06",
         }
 
-        client = ZPLClient(api_key="zpl_test")
+        client = ZPLClient(api_key="zpl_u_test_a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6")
         usage = client.get_usage()
 
         assert isinstance(usage, UsageInfo)
@@ -211,7 +211,7 @@ class TestZPLClientMethods(unittest.TestCase):
             ]
         }
 
-        client = ZPLClient(api_key="zpl_test")
+        client = ZPLClient(api_key="zpl_u_test_a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6")
         plans = client.get_plans()
 
         assert len(plans) == 2
@@ -232,7 +232,7 @@ class TestZPLClientMethods(unittest.TestCase):
             "version": "1.2.3",
         }
 
-        client = ZPLClient(api_key="zpl_test")
+        client = ZPLClient(api_key="zpl_u_test_a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6")
         health = client.get_health()
 
         assert isinstance(health, HealthStatus)
@@ -244,7 +244,7 @@ class TestErrorHandling(unittest.TestCase):
     """Test error handling."""
 
     def setUp(self):
-        self.client = ZPLClient(api_key="zpl_test")
+        self.client = ZPLClient(api_key="zpl_u_test_a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6")
 
     def test_handle_401_error(self):
         """Test handling of 401 Unauthorized."""
@@ -281,8 +281,8 @@ class TestContextManager(unittest.TestCase):
 
     def test_context_manager(self):
         """Test using client as context manager."""
-        with ZPLClient(api_key="zpl_test") as client:
-            assert client.api_key == "zpl_test"
+        with ZPLClient(api_key="zpl_u_test_a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6") as client:
+            assert client.api_key == "zpl_u_test_a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6"
 
 
 if __name__ == "__main__":

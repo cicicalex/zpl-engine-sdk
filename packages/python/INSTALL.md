@@ -11,7 +11,7 @@
 ### 1. Clone or Download
 
 ```bash
-cd /sessions/gifted-sharp-ritchie/mnt/Dev/Proiecte/zpl-python-sdk
+cd path/to/zpl-engine-sdk/packages/python
 ```
 
 ### 2. Create Virtual Environment (Optional but Recommended)
@@ -67,14 +67,14 @@ pip install zeropointlogic[dev]
 ### 1. Get API Key
 
 1. Visit https://zeropointlogic.io/dashboard
-2. Create API key (starts with `zpl_s_`)
+2. Create API key (**user** key starts with `zpl_u_`; `zpl_s_` is server-side only)
 3. Save securely
 
 ### 2. Configure Environment
 
 #### Option A: Environment Variable
 ```bash
-export ZPL_API_KEY="zpl_s_your_key_here"
+export ZPL_API_KEY="zpl_u_your_key_here"
 ```
 
 #### Option B: Code
@@ -82,14 +82,14 @@ export ZPL_API_KEY="zpl_s_your_key_here"
 import os
 from zeropointlogic import ZPLClient
 
-api_key = "zpl_s_your_key_here"  # Or from env
+api_key = "zpl_u_your_key_here"  # Or from env
 client = ZPLClient(api_key=api_key)
 ```
 
 #### Option C: .env File
 ```bash
 # Create .env file
-echo 'ZPL_API_KEY="zpl_s_your_key_here"' > .env
+echo 'ZPL_API_KEY="zpl_u_your_key_here"' > .env
 
 # Load in Python
 from dotenv import load_dotenv
@@ -106,8 +106,8 @@ api_key = os.getenv("ZPL_API_KEY")
 ```python
 from zeropointlogic import ZPLClient
 
-# Initialize with dummy key (for demo)
-client = ZPLClient(api_key="zpl_s_demo")
+# Use a real dashboard key in production; placeholder will fail auth on the engine.
+client = ZPLClient(api_key="zpl_u_invalid_placeholder")
 
 # Check available plans
 try:
@@ -137,7 +137,7 @@ pytest tests/test_client.py
 
 ```bash
 # Set your API key first
-export ZPL_API_KEY="zpl_s_your_key_here"
+export ZPL_API_KEY="zpl_u_your_key_here"
 
 # Run examples
 python examples/crypto_bias.py
@@ -151,14 +151,13 @@ python examples/forex_stability.py
 
 **Solution:**
 ```bash
-# Make sure you're in the SDK directory
-cd /sessions/gifted-sharp-ritchie/mnt/Dev/Proiecte/zpl-python-sdk
+# Make sure you're in the package directory (e.g. zpl-engine-sdk/packages/python)
 
 # Install in development mode
 pip install -e .
 
-# Or add to PYTHONPATH
-export PYTHONPATH="${PYTHONPATH}:/sessions/gifted-sharp-ritchie/mnt/Dev/Proiecte/zpl-python-sdk"
+# Or add to PYTHONPATH (use your local clone path)
+# export PYTHONPATH="${PYTHONPATH}:$(pwd)"
 ```
 
 ### Issue: "No module named 'requests'"
@@ -226,7 +225,7 @@ Build and run:
 
 ```bash
 docker build -t zpl-sdk .
-docker run -it -e ZPL_API_KEY="zpl_s_xxx" zpl-sdk
+docker run -it -e ZPL_API_KEY="zpl_u_xxx" zpl-sdk
 ```
 
 ## Integration in Existing Project
@@ -265,7 +264,7 @@ To update to latest version:
 
 ```bash
 # If installed from source
-cd /sessions/gifted-sharp-ritchie/mnt/Dev/Proiecte/zpl-python-sdk
+cd path/to/zpl-engine-sdk/packages/python
 git pull
 pip install -e . --upgrade
 

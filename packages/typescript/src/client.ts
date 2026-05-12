@@ -71,7 +71,28 @@ export class ZPLClient {
       throw new ZPLValidationError('API key is required');
     }
 
-    this.apiKey = config.apiKey.trim();
+    const trimmed = config.apiKey.trim();
+
+    // v2.0.2 (audit 2026-05-13): reject service keys outright. Pre-2.0.2
+    // the SDK accepted any non-empty string, so a developer could
+    // accidentally paste a `zpl_s_*` server-only key into client-side
+    // browser code and ship the secret. CLI and MCP already enforce
+    // this regex; SDK is now consistent.
+    //
+    // Format: `zpl_u_<48 hex>` or `zpl_u_<prefix>_<48 hex>` for
+    // wizard-issued user keys (mcp, cli). Anything else is rejected.
+    if (/^zpl_s_/i.test(trimmed)) {
+      throw new ZPLValidationError(
+        'apiKey is a service key (zpl_s_*). Service keys are server-only — never ship them in client bundles. Use a user key (zpl_u_*) from `zpl login` or zeropointlogic.io/dashboard/api-keys.',
+      );
+    }
+    if (!/^zpl_u_(?:[a-z]+_)?[a-f0-9]{48}$/.test(trimmed)) {
+      throw new ZPLValidationError(
+        'apiKey does not match the expected format (zpl_u_<48 hex> or zpl_u_<prefix>_<48 hex>). Check for trailing whitespace or stray characters.',
+      );
+    }
+
+    this.apiKey = trimmed;
     this.baseUrl = (config.baseUrl || 'https://engine.zeropointlogic.io').replace(/\/$/, '');
     this.timeout = config.timeout || 30000;
     this.debug = config.debug || false;
@@ -92,6 +113,48 @@ export class ZPLClient {
 
     // Use provided fetch or globalThis.fetch (works in Node.js 18+ and browsers)
     this.fetchFn = config.fetch || globalThis.fetch;
+
+    // v2.0.2 (audit 2026-05-13 Gap J): fire a one-shot heartbeat to ZPL Main
+    // so the funnel dashboard counts SDK adoption. Receiver already
+    // whitelists `sdk-typescript`. Fire-and-forget — never blocks the
+    // happy path; never throws. Set process.env.ZPL_SKIP_HEARTBEAT=1 to
+    // disable (CI runners that don't want the network call).
+    this.sendHeartbeatOnce();
+  }
+
+  /** Per-process dedup so 100 ZPLClient() in a loop = 1 heartbeat. */
+  private static heartbeatSent = false;
+  private sendHeartbeatOnce(): void {
+    if (ZPLClient.heartbeatSent) return;
+    if (typeof process !== 'undefined' && process.env?.ZPL_SKIP_HEARTBEAT === '1') return;
+    ZPLClient.heartbeatSent = true;
+    const url =
+      (typeof process !== 'undefined' && process.env?.ZPL_HEARTBEAT_URL) ||
+      'https://zeropointlogic.io/api/auth/cli/heartbeat';
+    // Use AbortSignal.timeout if available (Node 18.17+ / modern browsers).
+    const controller = typeof AbortController !== 'undefined' ? new AbortController() : undefined;
+    const timer = controller
+      ? setTimeout(() => controller.abort(), 5_000)
+      : undefined;
+    this.fetchFn(url, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${this.apiKey}`,
+        'Content-Type': 'application/json',
+        'User-Agent': this.userAgent,
+      },
+      body: JSON.stringify({
+        client: this.zplClientType,
+        version: this.zplClientVersion,
+      }),
+      signal: controller?.signal,
+    })
+      .catch(() => {
+        /* fire-and-forget — never throw */
+      })
+      .finally(() => {
+        if (timer) clearTimeout(timer);
+      });
   }
 
   /**

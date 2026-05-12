@@ -22,7 +22,7 @@ A **production-grade Python SDK** for the Zero Point Logic Engine API, implement
 ### Directory Structure
 
 ```
-zpl-python-sdk/
+packages/python/
 ├── zeropointlogic/              # Main package
 │   ├── __init__.py              # Public API exports
 │   ├── client.py                # ZPLClient & AsyncZPLClient (750 LOC)
@@ -191,7 +191,7 @@ pip install zeropointlogic[pandas]     # With pandas support
 ```python
 from zeropointlogic import ZPLClient, matrix_from_prices
 
-client = ZPLClient(api_key="zpl_s_xxx")
+client = ZPLClient(api_key="zpl_u_xxx")
 
 # From price series
 prices = [100, 105, 102, 110]
@@ -208,7 +208,7 @@ import asyncio
 from zeropointlogic import AsyncZPLClient
 
 async def main():
-    async with AsyncZPLClient(api_key="zpl_s_xxx") as client:
+    async with AsyncZPLClient(api_key="zpl_u_xxx") as client:
         result = await client.compute(matrix=[[0,1],[1,0]], samples=500)
         print(result.ain)
 
@@ -263,16 +263,7 @@ Currency pair analysis:
 
 ## API Plans
 
-```
-Free:       100 tokens/month     (Free)
-Basic:      10K tokens/month     (€9/mo)
-Pro:        50K tokens/month     (€27/mo)
-GamePro:    150K tokens/month    (€63/mo)
-Studio:     500K tokens/month    (€137/mo)
-Agent:      2M tokens/month      (€183/mo)
-Enterprise: 10M tokens/month     (€459/mo)
-XL:         Unlimited tokens     (€919/mo)
-```
+See **[zeropointlogic.io/pricing](https://zeropointlogic.io/pricing)** for current token limits and prices (Free tier includes thousands of tokens/month, not 100).
 
 ## Status Values
 
@@ -286,7 +277,7 @@ XL:         Unlimited tokens     (€919/mo)
 
 ```python
 ZPLClient(
-    api_key="zpl_s_xxx",           # Required
+    api_key="zpl_u_xxx",           # Required (user key from dashboard)
     base_url="https://...",        # Default: production
     timeout=30,                    # Seconds
     max_retries=3,                 # Retry attempts
@@ -362,16 +353,16 @@ Total:            ~2950 LOC
 6. **Retry with Backoff** — Resilient network requests
 7. **Rich Documentation** — Onboarding and reference
 
-## File Locations
+## File Locations (monorepo)
 
-- **Main SDK**: `/sessions/gifted-sharp-ritchie/mnt/Dev/Proiecte/zpl-python-sdk/zeropointlogic/`
-- **Tests**: `/sessions/gifted-sharp-ritchie/mnt/Dev/Proiecte/zpl-python-sdk/tests/`
-- **Examples**: `/sessions/gifted-sharp-ritchie/mnt/Dev/Proiecte/zpl-python-sdk/examples/`
-- **Docs**: `/sessions/gifted-sharp-ritchie/mnt/Dev/Proiecte/zpl-python-sdk/README.md`
+- **Main SDK**: `zpl-engine-sdk/packages/python/zeropointlogic/`
+- **Tests**: `zpl-engine-sdk/packages/python/tests/`
+- **Examples**: `zpl-engine-sdk/packages/python/examples/`
+- **Docs**: `zpl-engine-sdk/packages/python/README.md`
 
 ## Next Steps
 
-1. **Install**: `pip install -e /path/to/zpl-python-sdk`
+1. **Install**: `pip install -e .` (from `packages/python/` in your clone)
 2. **Test**: `pytest tests/`
 3. **Configure**: Set `ZPL_API_KEY` environment variable
 4. **Try examples**: Run `python examples/crypto_bias.py`

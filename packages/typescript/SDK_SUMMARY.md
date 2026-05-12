@@ -2,7 +2,7 @@
 
 Built: 2024
 Version: 1.0.0
-Location: `/sessions/gifted-sharp-ritchie/mnt/Dev/Proiecte/zpl-ts-sdk/`
+Monorepo path: `zpl-engine-sdk/packages/typescript/` (this file is a historical summary; see repo root `README.md` for current layout.)
 
 ## Project Overview
 
@@ -11,7 +11,7 @@ A professional, production-ready TypeScript SDK for the Zero Point Logic Engine 
 ## Directory Structure
 
 ```
-zpl-ts-sdk/
+packages/typescript/
 ├── src/                     # TypeScript source (5 files, ~2200 LOC)
 │   ├── index.ts            # Tree-shakeable exports
 │   ├── client.ts           # Main ZPLClient class (350 LOC)
@@ -361,5 +361,5 @@ MIT License - See LICENSE file
 
 **SDK Version**: 1.0.0  
 **Built**: 2024  
-**Location**: `/sessions/gifted-sharp-ritchie/mnt/Dev/Proiecte/zpl-ts-sdk/`  
+**Package path**: `zpl-engine-sdk/packages/typescript/`  
 **Status**: Production Ready

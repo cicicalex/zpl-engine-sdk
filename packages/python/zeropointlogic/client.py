@@ -56,20 +56,90 @@ class BaseZPLClient:
             x_zpl_client_version: ADR 0002 ``X-ZPL-Client-Version`` (default: package version).
 
         Raises:
-            ValueError: If api_key is empty or invalid format
+            ValueError: If api_key is empty, a service key, or wrong format.
         """
         if not api_key:
             raise ValueError("api_key cannot be empty")
-        if not api_key.startswith("zpl_"):
-            logger.warning(f"api_key does not start with 'zpl_' prefix: {api_key[:10]}...")
 
-        self.api_key = api_key
+        trimmed = api_key.strip()
+
+        # v2.0.2 (audit 2026-05-13): reject service keys + enforce format.
+        # Pre-2.0.2 the SDK only warned on a missing "zpl_" prefix, which
+        # meant a developer could ship a service key (zpl_s_*) in a Jupyter
+        # notebook or a CI script and not realise the secret was leaking
+        # downstream. CLI and MCP already enforce this regex; SDK now
+        # matches them.
+        import re
+        if re.match(r"^zpl_s_", trimmed, re.IGNORECASE):
+            raise ValueError(
+                "api_key is a service key (zpl_s_*). Service keys are "
+                "server-only — never ship them in notebooks or shared "
+                "scripts. Use a user key (zpl_u_*) from `zpl login` or "
+                "zeropointlogic.io/dashboard/api-keys."
+            )
+        if not re.match(r"^zpl_u_(?:[a-z]+_)?[a-f0-9]{48}$", trimmed):
+            raise ValueError(
+                "api_key does not match the expected format "
+                "(zpl_u_<48 hex> or zpl_u_<prefix>_<48 hex>). "
+                "Check for trailing whitespace or stray characters."
+            )
+
+        self.api_key = trimmed
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
         self.max_retries = max_retries
         self.backoff_factor = backoff_factor
         self._x_zpl_client = x_zpl_client if x_zpl_client is not None else ZPL_SDK_CLIENT_TYPE
         self._x_zpl_client_version = x_zpl_client_version if x_zpl_client_version is not None else __version__
+
+        # v2.0.2 (audit 2026-05-13 Gap J): fire a one-shot heartbeat to
+        # ZPL Main so /admin/usage counts Python SDK adoption. The receiver
+        # already whitelists `sdk-python`. Fire-and-forget; never blocks
+        # the happy path; never throws. Set ZPL_SKIP_HEARTBEAT=1 to
+        # disable (e.g. CI runners without network).
+        self._send_heartbeat_once()
+
+    # Class-level dedup so 100 ZPLClient() in a loop = 1 heartbeat.
+    _heartbeat_sent: bool = False
+
+    def _send_heartbeat_once(self) -> None:
+        import os
+        if ZPLClient._heartbeat_sent:
+            return
+        if os.environ.get("ZPL_SKIP_HEARTBEAT") == "1":
+            return
+        ZPLClient._heartbeat_sent = True
+        try:
+            import threading
+            url = os.environ.get(
+                "ZPL_HEARTBEAT_URL",
+                "https://zeropointlogic.io/api/auth/cli/heartbeat",
+            )
+            def _fire():
+                try:
+                    import requests
+                    requests.post(
+                        url,
+                        headers={
+                            "Authorization": f"Bearer {self.api_key}",
+                            "Content-Type": "application/json",
+                            "User-Agent": (
+                                f"Mozilla/5.0 (compatible; "
+                                f"zeropointlogic-python-sdk/{__version__}; "
+                                "+https://zeropointlogic.io)"
+                            ),
+                        },
+                        json={
+                            "client": self._x_zpl_client,
+                            "version": self._x_zpl_client_version,
+                        },
+                        timeout=5,
+                    )
+                except Exception:
+                    pass  # never throw on heartbeat
+            threading.Thread(target=_fire, daemon=True).start()
+        except Exception:
+            pass
 
     def _get_headers(self) -> dict[str, str]:
         """Get request headers with authentication."""
