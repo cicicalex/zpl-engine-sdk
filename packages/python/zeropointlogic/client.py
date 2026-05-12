@@ -106,6 +106,9 @@ class BaseZPLClient:
             raise ZPLAuthError(f"Authentication failed: {error_msg}", status_code=status_code)
 
         elif status_code == 402:
+            # Reserved for a future "payment required" semantic. The engine
+            # currently returns 403 for quota exhaustion — see the default
+            # branch below for the "Token limit exceeded" detection.
             tokens_remaining = data.get("tokens_remaining", 0)
             raise ZPLQuotaError(
                 f"Quota exceeded: {error_msg}",
@@ -126,6 +129,36 @@ class BaseZPLClient:
             )
 
         else:
+            # Engine returns HTTP 403 with body "Token limit exceeded: X/Y
+            # used this month" on monthly quota exhaustion. The 403 implies
+            # "Forbidden" (auth) but the cause is billing, so promote it to
+            # ZPLQuotaError with a friendly upgrade hint instead of raising
+            # generic ZPLError. Mirrors the TypeScript SDK + MCP behaviour.
+            # (audit complet 12.05 — SDK discoverability fix.)
+            import re as _re
+            if status_code == 403 and _re.search(r"token limit exceeded", error_msg, _re.IGNORECASE):
+                m = _re.search(r"(\d+)\s*/\s*(\d+)", error_msg)
+                used = int(m.group(1)) if m else None
+                limit = int(m.group(2)) if m else None
+                remaining = (limit - used) if (used is not None and limit is not None) else 0
+                usage = f" ({used} / {limit} tokens used this month)" if used is not None else ""
+                upgrade_msg = (
+                    f"Monthly ZPL Engine quota exceeded{usage}.\n"
+                    "\n"
+                    "Upgrade at https://zeropointlogic.io/pricing\n"
+                    "  • Basic   $10/mo   10,000 tokens\n"
+                    "  • Pro     $29/mo   50,000 tokens\n"
+                    "  • GamePro $69/mo  150,000 tokens\n"
+                    "\n"
+                    "Or buy a one-off pack: https://zeropointlogic.io/dashboard/billing"
+                )
+                raise ZPLQuotaError(
+                    upgrade_msg,
+                    tokens_remaining=remaining,
+                    status_code=status_code,
+                    response_data=data,
+                )
+
             raise ZPLError(f"API error: {error_msg}", status_code=status_code, response_data=data)
 
     def _validate_matrix(self, matrix: list[list[int]]) -> None:

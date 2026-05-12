@@ -63,16 +63,45 @@ export class ZPLRateLimitError extends ZPLError {
 }
 
 /**
- * Thrown when token quota is exceeded (402)
+ * Thrown when token quota is exceeded.
+ *
+ * The engine returns this as HTTP 403 (not 402) with the message
+ * "Token limit exceeded: X/Y used this month" — `parseApiError`
+ * detects that shape and routes it here so SDK consumers can `catch`
+ * by error class instead of string-matching.
+ *
+ * The default message now includes upgrade guidance so even consumers
+ * who just `console.error(err.message)` end up showing the user how
+ * to unblock themselves. This is the SDK equivalent of the MCP v4.1.4
+ * quota nudge (engine-mcp commit d0a11dc).
  */
 export class ZPLQuotaExceededError extends ZPLError {
   constructor(
-    message = 'Token quota exceeded for current plan',
+    message?: string,
     public tokensRequired?: number,
     public tokensRemaining?: number,
     details?: Record<string, unknown>
   ) {
-    super(message, 'ZPL_QUOTA_EXCEEDED', 402, details);
+    const usage =
+      tokensRequired && tokensRemaining !== undefined
+        ? ` (need ${tokensRequired}, have ${tokensRemaining})`
+        : '';
+    const composed =
+      message ??
+      [
+        `Monthly ZPL Engine quota exceeded${usage}.`,
+        '',
+        'Upgrade at https://zeropointlogic.io/pricing',
+        '  • Basic   $10/mo   10,000 tokens',
+        '  • Pro     $29/mo   50,000 tokens',
+        '  • GamePro $69/mo  150,000 tokens',
+        '',
+        'Or buy a one-off pack: https://zeropointlogic.io/dashboard/billing',
+      ].join('\n');
+    // Engine returns 403 (Forbidden) for this case. Older docs claimed
+    // 402; we use the real status code so `err.statusCode === 403`
+    // matches what fetch saw.
+    super(composed, 'ZPL_QUOTA_EXCEEDED', 403, details);
     this.name = 'ZPLQuotaExceededError';
     Object.setPrototypeOf(this, ZPLQuotaExceededError.prototype);
   }
@@ -225,14 +254,17 @@ export function parseApiError(
         typeof errorData === 'object' ? (errorData as Record<string, unknown>) : undefined
       );
 
-    case 402:
+    case 402: {
+      // Reserved for a future "payment required" semantic. Today the
+      // engine returns 403 (see default branch below).
       const quotaErr = errorData as Record<string, unknown>;
       return new ZPLQuotaExceededError(
-        message || 'Token quota exceeded',
+        message,
         quotaErr.tokensRequired as number | undefined,
         quotaErr.tokensRemaining as number | undefined,
         quotaErr.details as Record<string, unknown> | undefined
       );
+    }
 
     case 429: {
       const rateLimitErr = errorData as Record<string, unknown>;
@@ -260,6 +292,26 @@ export function parseApiError(
           : typeof obj.message === 'string'
             ? obj.message
             : undefined;
+
+      // Engine returns HTTP 403 with body "Token limit exceeded: X/Y used
+      // this month" when a user runs out of monthly quota. The status code
+      // implies "Forbidden" (auth issue) but the cause is actually billing,
+      // so route it to ZPLQuotaExceededError instead of generic ZPLError.
+      // Pulls the X / Y numbers out so the error exposes them as
+      // tokensRemaining / tokensRequired for caller introspection.
+      // (audit complet 12.05 — SDK discoverability sibling to MCP v4.1.4.)
+      if (status === 403 && fromBody && /token limit exceeded/i.test(fromBody)) {
+        const m = fromBody.match(/(\d+)\s*\/\s*(\d+)/);
+        const used = m ? Number(m[1]) : undefined;
+        const limit = m ? Number(m[2]) : undefined;
+        return new ZPLQuotaExceededError(
+          undefined, // use the default upgrade-friendly composed message
+          undefined,
+          used !== undefined && limit !== undefined ? limit - used : undefined,
+          typeof errorData === 'object' ? (errorData as Record<string, unknown>) : undefined
+        );
+      }
+
       return new ZPLError(
         message || fromBody || 'API request failed',
         'ZPL_API_ERROR',
