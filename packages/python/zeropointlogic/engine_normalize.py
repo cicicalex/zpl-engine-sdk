@@ -48,13 +48,22 @@ def compute_result_from_engine_dict(
     cm = data.get("compute_ms")
     compute_ms = float(cm) if isinstance(cm, (int, float)) and not isinstance(cm, bool) else None
 
+    # AUDIT 2026-05-13 (D3 + D4): p_output / deviation removed from
+    # ComputeResult to plug an IP leak. tokens_remaining is now
+    # Optional and only populated when the engine actually returned a
+    # value (None means "ask /usage").
+    tokens_remaining_present = "tokens_remaining" in data or "tokensRemaining" in data
+    tokens_remaining_val: int | None = (
+        _int_num(data, "tokens_remaining", "tokensRemaining", default=0)
+        if tokens_remaining_present
+        else None
+    )
+
     return ComputeResult(
         ain=_num(data, "ain", default=0.0),
-        p_output=_num(data, "p_output", "pOutput", default=0.0),
-        deviation=_num(data, "deviation", default=0.0),
         status=status,
         tokens_used=_int_num(data, "tokens_used", "tokensUsed", default=0),
-        tokens_remaining=_int_num(data, "tokens_remaining", "tokensRemaining", default=0),
+        tokens_remaining=tokens_remaining_val,
         matrix_size=matrix_size,
         samples=samples,
         ain_status=ain_status_s,

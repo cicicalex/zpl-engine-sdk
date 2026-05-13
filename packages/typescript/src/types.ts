@@ -24,17 +24,24 @@ export type BiasLevel = 'none' | 'low' | 'moderate' | 'high' | 'critical';
 export type BinaryMatrix = number[][];
 
 /**
- * Main result from ZPL Engine compute endpoint
+ * Main result from ZPL Engine compute endpoint.
+ *
+ * AUDIT 2026-05-13 (BUG B2 — IP LEAK): pre-fix this interface
+ * exposed `pOutput: number` and `deviation: number` as public,
+ * documented fields. The MCP server intentionally hides those
+ * (see `mcp/src/index.ts` "IP protection: expose AIN score +
+ * status only"). The SDK contradicting that policy meant the
+ * internal probability + deviation scalars shipped in every
+ * `dist/types.d.ts` and were available to anyone running
+ * `tsc` against the public types. Per the "Live Engine Only"
+ * rule + the trade-secret strategy, both fields are removed
+ * from the public surface. They're still in the wire response
+ * but the SDK normaliser drops them before returning to the
+ * caller (see `utils.ts::normalizeEngineComputeResult`).
  */
 export interface ComputeResult {
   /** AI Neutrality Index: 0-1 score (1 = perfectly neutral) */
   ain: number;
-
-  /** Predicted output probability */
-  pOutput: number;
-
-  /** Standard deviation of the analysis */
-  deviation: number;
 
   /** Categorical status of neutrality */
   status: AINStatus;
@@ -50,9 +57,15 @@ export interface ComputeResult {
 
   /**
    * Tokens remaining when the engine returns quota hints.
-   * Omitted by some engine builds — then normalized to 0; use getUsage() for live quota.
+   *
+   * AUDIT 2026-05-13 (D4): made optional. Pre-fix this was `number`
+   * and defaulted to 0 when absent, which scared every fresh user
+   * with "tokens=0 left" on their first compute even though they
+   * had 50M left. Now `undefined` means "engine didn't tell us;
+   * call getUsage() for live quota". `__str__` / display logic
+   * should show "n/a" when missing, not zero.
    */
-  tokensRemaining: number;
+  tokensRemaining?: number;
 
   /** Computed: true if ain >= 0.7 (high neutrality) */
   isNeutral: boolean;

@@ -314,7 +314,12 @@ export class ZPLClient {
 
               results.push(result);
               totalTokensUsed += result.tokensUsed;
-              totalTokensRemaining = result.tokensRemaining;
+              // AUDIT 2026-05-13 (D4): tokensRemaining is now Optional —
+              // only update the running total when the engine actually
+              // emitted a value.
+              if (result.tokensRemaining !== undefined) {
+                totalTokensRemaining = result.tokensRemaining;
+              }
             } catch (error) {
               errors.push(error instanceof Error ? error : new Error(String(error)));
 

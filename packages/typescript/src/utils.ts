@@ -330,27 +330,35 @@ function coerceStatus(s: string | undefined): AINStatus {
 /**
  * Map raw JSON from POST /compute (snake_case engine fields) into {@link ComputeResult}
  * without derived fields `isNeutral` / `biasLevel` (client adds those).
+ *
+ * AUDIT 2026-05-13 (B2 + D4): `p_output` and `deviation` are read from
+ * the wire response but NOT placed into the public ComputeResult — they
+ * are trade-secret intermediates per the "Live Engine Only" / IP rules
+ * (the MCP hides them; the SDK now matches). `tokens_remaining` is only
+ * included when the engine actually returns it; absent means "n/a" and
+ * the field stays `undefined` so consumers don't render misleading
+ * "tokens=0 left" scare messages on a healthy account.
  */
 export function normalizeEngineComputeResult(raw: Record<string, unknown>): Omit<ComputeResult, 'isNeutral' | 'biasLevel'> {
   const ain = pickNumber(raw, ['ain'], 0);
-  const pOutput = pickNumber(raw, ['p_output', 'pOutput'], 0);
-  const deviation = pickNumber(raw, ['deviation'], 0);
   const status = coerceStatus(pickString(raw, ['status']));
   const ainStatus = pickString(raw, ['ain_status', 'ainStatus']);
   const computeMsRaw = pickNumber(raw, ['compute_ms', 'computeMs'], NaN);
   const tokensUsed = Math.round(pickNumber(raw, ['tokens_used', 'tokensUsed'], 0));
-  const tokensRemaining = Math.round(
-    pickNumber(raw, ['tokens_remaining', 'tokensRemaining'], 0)
-  );
+  // tokens_remaining: only set when engine actually included it. We
+  // distinguish absent (undefined) from zero so the "you have N left"
+  // hint only shows when it's real.
+  const tokensRemainingPresent = 'tokens_remaining' in raw || 'tokensRemaining' in raw;
+  const tokensRemainingValue = tokensRemainingPresent
+    ? Math.round(pickNumber(raw, ['tokens_remaining', 'tokensRemaining'], 0))
+    : undefined;
 
   const out: Omit<ComputeResult, 'isNeutral' | 'biasLevel'> = {
     ain,
-    pOutput,
-    deviation,
     status,
     tokensUsed,
-    tokensRemaining,
   };
+  if (tokensRemainingValue !== undefined) out.tokensRemaining = tokensRemainingValue;
   if (ainStatus !== undefined) out.ainStatus = ainStatus;
   if (Number.isFinite(computeMsRaw)) out.computeMs = computeMsRaw;
   return out;

@@ -37,13 +37,31 @@ def ain_to_bias_level(ain: float) -> BiasLevel:
 class ComputeResult:
     """Result from a compute operation.
 
+    AUDIT 2026-05-13 (BUG D3 — IP LEAK + D4 tokens display):
+
+    Pre-fix this dataclass exposed `p_output: float` and `deviation: float`
+    as required, documented attributes. The MCP server intentionally hides
+    those fields (see `mcp/src/index.ts` "IP protection: expose AIN score
+    + status only"). The SDK contradicting that policy meant internal
+    probability + deviation scalars shipped in every wheel and were
+    documented in the public README. Per the "Live Engine Only" rule
+    and the trade-secret strategy, both fields are removed from the
+    public surface. The wire response still carries them but the SDK
+    normaliser drops them before constructing this dataclass.
+
+    `tokens_remaining` is now Optional[int]: pre-fix it defaulted to 0
+    when the engine didn't return a value, which scared every fresh
+    user with "tokens=0 left" on their first compute even though they
+    had 50M left. `None` now means "engine didn't tell us"; the __str__
+    prints "tokens=n/a" in that case and consumers should call
+    `client.get_usage()` for live quota.
+
     Attributes:
         ain: AI Neutrality Index (0-1), higher is more neutral
-        p_output: Probability output from the model
-        deviation: Standard deviation from expected distribution
         status: Classification of bias level (CERTIFIED_NEUTRAL, STABLE, etc.)
         tokens_used: Number of tokens consumed by this request
-        tokens_remaining: Number of tokens left when the API returns it (else 0)
+        tokens_remaining: Tokens left when the engine actually returns it,
+            else None.
         matrix_size: Size of input matrix (N×N)
         samples: Number of samples used
         ain_status: Engine AIN band label when present
@@ -51,11 +69,9 @@ class ComputeResult:
     """
 
     ain: float
-    p_output: float
-    deviation: float
     status: AIStatusType
     tokens_used: int
-    tokens_remaining: int
+    tokens_remaining: int | None = None
     matrix_size: int | None = None
     samples: int | None = None
     ain_status: str | None = None
@@ -98,7 +114,12 @@ class ComputeResult:
         return ain_to_bias_level(self.ain)
 
     def __str__(self) -> str:
-        return f"ComputeResult(ain={self.ain:.3f}, status={self.status}, tokens={self.tokens_remaining} left)"
+        rem = (
+            f"{self.tokens_remaining} left"
+            if self.tokens_remaining is not None
+            else "tokens=n/a (call get_usage())"
+        )
+        return f"ComputeResult(ain={self.ain:.3f}, status={self.status}, used={self.tokens_used}, {rem})"
 
 
 @dataclass
