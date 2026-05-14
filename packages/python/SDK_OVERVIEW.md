@@ -373,7 +373,7 @@ Total:            ~2950 LOC
 - **Repository**: https://github.com/cicicalex/zpl-engine-sdk
 - **Issues**: https://github.com/cicicalex/zpl-engine-sdk/issues
 - **Email**: support@zeropointlogic.io
-- **Author**: Alex Cicic (cicicalex20@gmail.com)
+- **Author**: Zero Point Logic (contact@zeropointlogic.io)
 
 ---
 

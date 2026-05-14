@@ -8,7 +8,7 @@ version = "2.0.4"
 description = "Professional Python SDK for Zero Point Logic Engine API"
 readme = "README.md"
 license = "MIT"
-authors = [{name = "Alex Cicic", email = "cicicalex20@gmail.com"}]
+authors = [{name = "Zero Point Logic", email = "contact@zeropointlogic.io"}]
 keywords = ["zpl", "zeropointlogic", "api", "neutrality", "bias", "stability", "crypto", "finance"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
