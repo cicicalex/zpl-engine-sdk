@@ -2,7 +2,7 @@
 
 All notable changes to the ZPL Engine SDK monorepo are documented here.
 
-Versioning: **TypeScript** and **Python** package versions in `packages/*` should stay aligned for the same API contract. **zpl-engine-mcp** is released separately from [mcp/engine-mcp](../../mcp/engine-mcp); note compatible engine URLs in MCP release notes.
+Versioning: **TypeScript** and **Python** package versions in `packages/*` should stay aligned for the same API contract. **zpl-engine-mcp** is released separately from [github.com/cicicalex/zpl-engine-mcp](https://github.com/cicicalex/zpl-engine-mcp); note compatible engine URLs in MCP release notes.
 
 ## [1.0.4] - 2026-05-11
 
