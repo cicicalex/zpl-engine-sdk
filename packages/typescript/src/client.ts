@@ -38,6 +38,47 @@ import {
 
 import { SDK_VERSION, ZPL_SDK_CLIENT_TYPE } from './meta.js';
 
+// AUDIT 2026-05-14 (HIGH): the SDK Bearer-authorises every request to
+// `baseUrl` + `accountBaseUrl` + the heartbeat URL. Any of those reading
+// an attacker-controlled hostname (env var, malicious wrapper package
+// config, committed .env) silently exfiltrates the user's API key on the
+// first call. We allowlist by hostname suffix. Self-hosted / dev users
+// can opt out with ZPL_SDK_ALLOW_PRIVATE=1 (acknowledging they're
+// pointing at infrastructure they trust).
+const ALLOWED_HOST_SUFFIXES = [
+  'zeropointlogic.io',
+];
+function isAllowedHost(urlStr: string): boolean {
+  try {
+    const u = new URL(urlStr);
+    if (typeof process !== 'undefined' && process.env?.ZPL_SDK_ALLOW_PRIVATE === '1') {
+      return true;
+    }
+    if (u.protocol !== 'https:' && u.protocol !== 'http:') return false;
+    // Strict suffix match: must end with one of the allowed bases AND
+    // either match exactly or have a dot before the suffix (so
+    // `evil-zeropointlogic.io` doesn't sneak in).
+    return ALLOWED_HOST_SUFFIXES.some((base) => {
+      return u.hostname === base || u.hostname.endsWith('.' + base);
+    });
+  } catch {
+    return false;
+  }
+}
+function sanitizeBaseUrl(candidate: string | undefined, fallback: string): string {
+  if (!candidate) return fallback.replace(/\/$/, '');
+  const cleaned = candidate.replace(/\/$/, '');
+  if (isAllowedHost(cleaned)) return cleaned;
+  // Don't silently use a rejected URL — fall back to the safe default.
+  // Emitting to stderr so non-interactive consumers still see the warning.
+  if (typeof process !== 'undefined' && process.stderr?.write) {
+    process.stderr.write(
+      `[zpl-sdk] Rejecting non-allowlisted URL "${candidate}" — falling back to "${fallback}". Set ZPL_SDK_ALLOW_PRIVATE=1 if self-hosted.\n`,
+    );
+  }
+  return fallback.replace(/\/$/, '');
+}
+
 /**
  * ZPL Engine API Client
  * Provides methods to interact with the ZPL stability/neutrality analysis engine
@@ -96,13 +137,26 @@ export class ZPLClient {
     }
 
     this.apiKey = trimmed;
-    this.baseUrl = (config.baseUrl || 'https://engine.zeropointlogic.io').replace(/\/$/, '');
+    // AUDIT 2026-05-14 (HIGH): both `baseUrl` and `accountBaseUrl` accept
+    // any string from caller config / env. The SDK sends `Authorization:
+    // Bearer <apiKey>` to both on every call, so an attacker-supplied
+    // hostname (committed .env, CI variable injection, malicious wrapper
+    // package) silently exfiltrates the user's API key on the first
+    // heartbeat. CLI + MCP enforce a host allowlist; SDK now matches.
+    // Set ZPL_SDK_ALLOW_PRIVATE=1 only for genuine self-hosted setups.
+    this.baseUrl = sanitizeBaseUrl(
+      config.baseUrl,
+      'https://engine.zeropointlogic.io',
+    );
     // AUDIT 2026-05-14 (v2.0.3): account-level metadata (plan / quota /
     // usage) doesn't live on the engine — it lives on ZPL Main behind
     // /api/user/me. Pre-fix `getUsage()` hit `engine.zeropointlogic.io/usage`
     // which never existed (returned 404 "Not found"). CLI v1.1.7 made the
     // same move; SDK is now consistent.
-    this.accountBaseUrl = (config.accountBaseUrl || 'https://zeropointlogic.io').replace(/\/$/, '');
+    this.accountBaseUrl = sanitizeBaseUrl(
+      config.accountBaseUrl,
+      'https://zeropointlogic.io',
+    );
     this.timeout = config.timeout || 30000;
     this.debug = config.debug || false;
 
@@ -137,9 +191,19 @@ export class ZPLClient {
     if (ZPLClient.heartbeatSent) return;
     if (typeof process !== 'undefined' && process.env?.ZPL_SKIP_HEARTBEAT === '1') return;
     ZPLClient.heartbeatSent = true;
-    const url =
-      (typeof process !== 'undefined' && process.env?.ZPL_HEARTBEAT_URL) ||
-      'https://zeropointlogic.io/api/auth/cli/heartbeat';
+    // AUDIT 2026-05-14 (HIGH): ZPL_HEARTBEAT_URL was env-overridable
+    // without host validation. A committed-by-mistake .env or a poisoned
+    // CI variable could redirect the Bearer-Authorized POST to an
+    // attacker host on every new ZPLClient() — silent key exfil. Now
+    // gated by the same allowlist as baseUrl. Set ZPL_SDK_ALLOW_PRIVATE=1
+    // to bypass for self-hosted/local-dev.
+    const envHeartbeat =
+      typeof process !== 'undefined' && process.env?.ZPL_HEARTBEAT_URL
+        ? process.env.ZPL_HEARTBEAT_URL
+        : undefined;
+    const url = envHeartbeat
+      ? sanitizeBaseUrl(envHeartbeat, 'https://zeropointlogic.io/api/auth/cli/heartbeat')
+      : 'https://zeropointlogic.io/api/auth/cli/heartbeat';
     // Use AbortSignal.timeout if available (Node 18.17+ / modern browsers).
     const controller = typeof AbortController !== 'undefined' ? new AbortController() : undefined;
     const timer = controller

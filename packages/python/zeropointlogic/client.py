@@ -26,6 +26,51 @@ logger = logging.getLogger(__name__)
 ZPL_SDK_CLIENT_TYPE = "sdk-python"
 
 
+# AUDIT 2026-05-14 (HIGH): host allowlist for any URL the SDK sends the
+# Bearer-authorised API key to. Pre-fix base_url / account_base_url /
+# ZPL_HEARTBEAT_URL accepted any string. A committed .env, a poisoned CI
+# variable, or a malicious wrapper package could silently exfiltrate the
+# user's API key on the first SDK call. CLI + MCP enforce the same
+# allowlist. Genuine self-hosted setups can opt out with
+# ZPL_SDK_ALLOW_PRIVATE=1.
+_ALLOWED_HOST_SUFFIXES = ("zeropointlogic.io",)
+
+
+def _is_allowed_host(url_str: str) -> bool:
+    import os
+    from urllib.parse import urlparse
+    if os.environ.get("ZPL_SDK_ALLOW_PRIVATE") == "1":
+        return True
+    try:
+        u = urlparse(url_str)
+    except Exception:
+        return False
+    if u.scheme not in ("http", "https"):
+        return False
+    host = (u.hostname or "").lower()
+    # Strict suffix match: `host == base` OR `host endswith ".base"` so
+    # `evil-zeropointlogic.io` is rejected.
+    for base in _ALLOWED_HOST_SUFFIXES:
+        if host == base or host.endswith("." + base):
+            return True
+    return False
+
+
+def _sanitize_base_url(candidate: Optional[str], fallback: str) -> str:
+    import sys
+    fb = fallback.rstrip("/")
+    if not candidate:
+        return fb
+    cleaned = candidate.rstrip("/")
+    if _is_allowed_host(cleaned):
+        return cleaned
+    sys.stderr.write(
+        f"[zpl-sdk] Rejecting non-allowlisted URL {candidate!r} — "
+        f"falling back to {fb!r}. Set ZPL_SDK_ALLOW_PRIVATE=1 if self-hosted.\n"
+    )
+    return fb
+
+
 class BaseZPLClient:
     """Base client with common functionality."""
 
@@ -86,12 +131,20 @@ class BaseZPLClient:
             )
 
         self.api_key = trimmed
-        self.base_url = base_url.rstrip("/")
+        # AUDIT 2026-05-14 (HIGH): both `base_url` and `account_base_url`
+        # accept any caller-supplied string. The SDK sends Authorization:
+        # Bearer <api_key> to both, so an attacker-controlled hostname
+        # (env, malicious wrapper config, committed .env) silently
+        # exfiltrates the API key. CLI + MCP enforce a host allowlist;
+        # SDK now matches. Self-hosted setups set ZPL_SDK_ALLOW_PRIVATE=1.
+        self.base_url = _sanitize_base_url(base_url, "https://engine.zeropointlogic.io")
         # AUDIT 2026-05-14 (v2.0.3): account-level metadata (plan, quota,
         # usage) lives on ZPL Main, not the engine. Engine has no /usage
         # endpoint — pre-fix get_usage() hit a 404. CLI made the same
         # switch in v1.1.7. Override only for self-hosted deployments.
-        self.account_base_url = account_base_url.rstrip("/")
+        self.account_base_url = _sanitize_base_url(
+            account_base_url, "https://zeropointlogic.io"
+        )
         self.timeout = timeout
         self.max_retries = max_retries
         self.backoff_factor = backoff_factor
@@ -117,9 +170,15 @@ class BaseZPLClient:
         ZPLClient._heartbeat_sent = True
         try:
             import threading
-            url = os.environ.get(
-                "ZPL_HEARTBEAT_URL",
-                "https://zeropointlogic.io/api/auth/cli/heartbeat",
+            # AUDIT 2026-05-14: env override goes through the same allowlist
+            # so a poisoned ZPL_HEARTBEAT_URL can't redirect the Bearer-
+            # authenticated POST to an attacker host.
+            heartbeat_default = "https://zeropointlogic.io/api/auth/cli/heartbeat"
+            heartbeat_env = os.environ.get("ZPL_HEARTBEAT_URL")
+            url = (
+                _sanitize_base_url(heartbeat_env, heartbeat_default)
+                if heartbeat_env
+                else heartbeat_default
             )
             def _fire():
                 try:
