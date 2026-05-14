@@ -1,9 +1,16 @@
-"""Setup configuration for ZPL Engine SDK."""
+"""Setup configuration for ZPL Engine SDK.
+
+NOTE: pyproject.toml is the source of truth for modern installs.
+This setup.py exists for legacy tooling (e.g. `python setup.py install`,
+some CI/Conda flows). Read the version from `zeropointlogic/version.py`
+so we never re-diverge — pre-fix this file said 1.0.4 while pyproject
+already shipped 2.0.3, and any tool reading setup.py would install a
+broken pre-wire-shape-fix version that 400's every compute call.
+"""
 
 from setuptools import setup, find_packages
 import os
 
-# Read README for long description
 def read_file(filename):
     filepath = os.path.join(os.path.dirname(__file__), filename)
     if os.path.exists(filepath):
@@ -11,9 +18,19 @@ def read_file(filename):
             return f.read()
     return ''
 
+def read_version():
+    version_file = os.path.join(
+        os.path.dirname(__file__), "zeropointlogic", "version.py"
+    )
+    with open(version_file, "r", encoding="utf-8") as f:
+        for line in f:
+            if line.startswith("__version__"):
+                return line.split("=")[1].strip().strip('"').strip("'")
+    raise RuntimeError("__version__ not found in zeropointlogic/version.py")
+
 setup(
     name="zeropointlogic",
-    version="1.0.4",
+    version=read_version(),
     description="Professional Python SDK for Zero Point Logic Engine API",
     long_description=read_file("README.md"),
     long_description_content_type="text/markdown",
