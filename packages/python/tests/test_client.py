@@ -168,26 +168,48 @@ class TestZPLClientCompute(unittest.TestCase):
 class TestZPLClientMethods(unittest.TestCase):
     """Test client methods."""
 
-    @patch("zeropointlogic.client.ZPLClient._make_request")
-    def test_get_usage(self, mock_request):
-        """Test get_usage method."""
-        mock_request.return_value = {
-            "plan": "pro",
-            "tokens_used": 5000,
-            "tokens_limit": 50000,
-            "tokens_remaining": 45000,
-            "reset_date": "2026-05-06",
-            "requests_made": 150,
-            "last_reset": "2026-04-06",
-        }
+    def test_get_usage(self):
+        """Test get_usage method.
+
+        AUDIT 2026-05-14 (v2.0.3): get_usage no longer hits the engine —
+        it hits ZPL Main's /api/user/me. The mock target changed from
+        _make_request (engine wrapper) to self._requests.get (direct
+        requests.get call to zeropointlogic.io).
+        """
+        from unittest.mock import MagicMock
 
         client = ZPLClient(api_key="zpl_u_test_a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6")
+
+        # Mock the live response from zeropointlogic.io/api/user/me
+        fake_response = MagicMock()
+        fake_response.status_code = 200
+        fake_response.json.return_value = {
+            "user": {"id": "u1", "email": "test@test.com", "name": "Test", "role": "user", "plan": "pro", "plan_name": "Pro"},
+            "tokens": {
+                "remaining": 45000,
+                "used_this_month": 5000,
+                "monthly_quota": 50000,
+                "bonus_balance": 0,
+                "total_available_this_cycle": 50000,
+                "percent_used": 10,
+            },
+            "limits": {"max_d": 25, "max_keys": 3},
+        }
+        client._requests = MagicMock()
+        client._requests.get.return_value = fake_response
+
         usage = client.get_usage()
 
         assert isinstance(usage, UsageInfo)
         assert usage.plan == "pro"
         assert usage.tokens_remaining == 45000
-        assert usage.usage_percent == 10.0
+        assert usage.tokens_used == 5000
+        assert usage.tokens_limit == 50000
+        # Verify it hit ZPL Main, not the engine
+        called_url = client._requests.get.call_args[0][0]
+        assert called_url.endswith("/api/user/me"), f"expected /api/user/me, got {called_url}"
+        assert "zeropointlogic.io" in called_url
+        assert "engine.zeropointlogic.io" not in called_url
 
     @patch("zeropointlogic.client.ZPLClient._make_request")
     def test_get_plans(self, mock_request):

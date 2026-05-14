@@ -85,35 +85,39 @@ export interface BatchComputeResult {
 }
 
 /**
- * User account usage statistics
+ * User account usage statistics.
+ *
+ * AUDIT 2026-05-14 (v2.0.3): rewritten to match the actual shape of
+ * `zeropointlogic.io/api/user/me` (the only place quota lives — engine
+ * never had a /usage endpoint). v2.0.0–2.0.2 callers reading
+ * `usedToday` / `dailyLimit` / `resetAtToday` were receiving `undefined`
+ * at runtime anyway (404 from the engine), so removing those fields here
+ * is a no-op in practice. CLI made the same switch in v1.1.7.
  */
 export interface Usage {
-  /** Current plan tier */
+  /** Current plan tier ('free' | 'basic' | 'pro' | …) */
   plan: string;
 
-  /** Daily token limit */
-  dailyLimit: number;
-
-  /** Monthly token limit */
-  monthlyLimit: number;
-
-  /** Tokens used today */
-  usedToday: number;
-
   /** Tokens used this month */
-  usedThisMonth: number;
+  tokensUsed: number;
 
-  /** Tokens remaining in daily limit */
-  tokensRemainingToday: number;
+  /** Tokens remaining in the current monthly cycle */
+  tokensRemaining: number;
 
-  /** Tokens remaining in monthly limit */
-  tokensRemainingMonth: number;
+  /** Monthly token quota for the current plan */
+  tokensQuota: number;
 
-  /** Reset time for daily quota (ISO 8601) */
-  resetAtToday: string;
+  /** Bonus tokens balance (e.g. launch promos). 0 if none. */
+  bonusBalance: number;
 
-  /** Reset time for monthly quota (ISO 8601) */
-  resetAtMonth: string;
+  /** Percentage of monthly quota consumed (0-100, server-computed) */
+  percentUsed: number;
+
+  /** Max matrix dimension allowed by the current plan (optional) */
+  maxDimension?: number;
+
+  /** When this snapshot was fetched */
+  retrievedAt: Date;
 }
 
 /**
@@ -194,6 +198,14 @@ export interface ZPLClientConfig {
 
   /** Base URL of ZPL Engine (default: https://engine.zeropointlogic.io) */
   baseUrl?: string;
+
+  /**
+   * Base URL for account / billing metadata calls (default:
+   * https://zeropointlogic.io). Used by `getUsage()` because the engine
+   * itself doesn't host /api/user/me — that endpoint lives on ZPL Main.
+   * Override only for self-hosted ZPL deployments.
+   */
+  accountBaseUrl?: string;
 
   /** Default timeout in milliseconds (default: 30000) */
   timeout?: number;

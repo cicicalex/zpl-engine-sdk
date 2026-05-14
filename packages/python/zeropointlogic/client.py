@@ -37,6 +37,7 @@ class BaseZPLClient:
         self,
         api_key: str,
         base_url: str = "https://engine.zeropointlogic.io",
+        account_base_url: str = "https://zeropointlogic.io",
         timeout: int = DEFAULT_TIMEOUT,
         max_retries: int = DEFAULT_RETRIES,
         backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
@@ -86,6 +87,11 @@ class BaseZPLClient:
 
         self.api_key = trimmed
         self.base_url = base_url.rstrip("/")
+        # AUDIT 2026-05-14 (v2.0.3): account-level metadata (plan, quota,
+        # usage) lives on ZPL Main, not the engine. Engine has no /usage
+        # endpoint — pre-fix get_usage() hit a 404. CLI made the same
+        # switch in v1.1.7. Override only for self-hosted deployments.
+        self.account_base_url = account_base_url.rstrip("/")
         self.timeout = timeout
         self.max_retries = max_retries
         self.backoff_factor = backoff_factor
@@ -402,6 +408,12 @@ class ZPLClient(BaseZPLClient):
     def get_usage(self) -> UsageInfo:
         """Get current API usage information.
 
+        AUDIT 2026-05-14 (v2.0.3): re-routed from ``engine/usage`` (404,
+        never existed) to ``zeropointlogic.io/api/user/me``. The CLI made
+        the same switch in v1.1.7. Response shape is mapped back to
+        ``UsageInfo`` so existing callers see no breaking change beyond
+        the fields the old endpoint never delivered.
+
         Returns:
             UsageInfo with plan and token details
 
@@ -409,16 +421,29 @@ class ZPLClient(BaseZPLClient):
             ZPLAuthError: If API key is invalid
             ZPLNetworkError: On connection errors
         """
-        response = self._make_request("GET", "/usage")
+        # Direct request to ZPL Main (not the engine). Reuses the requests
+        # library + headers + timeout policy from the sync client.
+        url = f"{self.account_base_url}/api/user/me"
+        headers = self._get_headers()
+        try:
+            r = self._requests.get(url, headers=headers, timeout=self.timeout)
+        except Exception as e:  # pragma: no cover — network failure path
+            from .exceptions import ZPLNetworkError
+            raise ZPLNetworkError(f"Failed to reach {url}: {e}")
+        if r.status_code != 200:
+            self._handle_error_response(r.status_code, {}, r.text or "")
+        data = r.json()
 
+        # Map ZPL Main /api/user/me → SDK UsageInfo dataclass.
+        tokens = data.get("tokens", {})
         return UsageInfo(
-            plan=response.get("plan", "unknown"),
-            tokens_used=response.get("tokens_used", 0),
-            tokens_limit=response.get("tokens_limit", 0),
-            tokens_remaining=response.get("tokens_remaining", 0),
-            reset_date=response.get("reset_date", ""),
-            requests_made=response.get("requests_made", 0),
-            last_reset=response.get("last_reset", ""),
+            plan=data.get("user", {}).get("plan", "unknown"),
+            tokens_used=tokens.get("used_this_month", 0),
+            tokens_limit=tokens.get("monthly_quota", 0),
+            tokens_remaining=tokens.get("remaining", 0),
+            reset_date="",  # legacy field; ZPL Main computes via cycles, not absolute dates
+            requests_made=0,  # ZPL Main aggregates by tokens, not raw request count
+            last_reset="",
         )
 
     def get_plans(self) -> list[PlanInfo]:
@@ -642,6 +667,9 @@ class AsyncZPLClient(BaseZPLClient):
     async def get_usage(self) -> UsageInfo:
         """Get current API usage information (async).
 
+        AUDIT 2026-05-14 (v2.0.3): see sync counterpart — re-routed from
+        ``engine/usage`` (404) to ``zeropointlogic.io/api/user/me``.
+
         Returns:
             UsageInfo with plan and token details
 
@@ -649,16 +677,27 @@ class AsyncZPLClient(BaseZPLClient):
             ZPLAuthError: If API key is invalid
             ZPLNetworkError: On connection errors
         """
-        response = await self._make_request("GET", "/usage")
+        client = await self._ensure_client()
+        url = f"{self.account_base_url}/api/user/me"
+        headers = self._get_headers()
+        try:
+            r = await client.get(url, headers=headers, timeout=self.timeout)
+        except Exception as e:  # pragma: no cover — network failure path
+            from .exceptions import ZPLNetworkError
+            raise ZPLNetworkError(f"Failed to reach {url}: {e}")
+        if r.status_code != 200:
+            self._handle_error_response(r.status_code, {}, r.text or "")
+        data = r.json()
 
+        tokens = data.get("tokens", {})
         return UsageInfo(
-            plan=response.get("plan", "unknown"),
-            tokens_used=response.get("tokens_used", 0),
-            tokens_limit=response.get("tokens_limit", 0),
-            tokens_remaining=response.get("tokens_remaining", 0),
-            reset_date=response.get("reset_date", ""),
-            requests_made=response.get("requests_made", 0),
-            last_reset=response.get("last_reset", ""),
+            plan=data.get("user", {}).get("plan", "unknown"),
+            tokens_used=tokens.get("used_this_month", 0),
+            tokens_limit=tokens.get("monthly_quota", 0),
+            tokens_remaining=tokens.get("remaining", 0),
+            reset_date="",
+            requests_made=0,
+            last_reset="",
         )
 
     async def get_plans(self) -> list[PlanInfo]:

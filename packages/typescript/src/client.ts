@@ -58,6 +58,9 @@ import { SDK_VERSION, ZPL_SDK_CLIENT_TYPE } from './meta.js';
 export class ZPLClient {
   private apiKey: string;
   private baseUrl: string;
+  // AUDIT 2026-05-14 (v2.0.3): see constructor — account-level metadata
+  // (plan, quota, usage) lives on ZPL Main, not the engine.
+  private accountBaseUrl: string;
   private timeout: number;
   private retryPolicy: RetryPolicy;
   private debug: boolean;
@@ -94,6 +97,12 @@ export class ZPLClient {
 
     this.apiKey = trimmed;
     this.baseUrl = (config.baseUrl || 'https://engine.zeropointlogic.io').replace(/\/$/, '');
+    // AUDIT 2026-05-14 (v2.0.3): account-level metadata (plan / quota /
+    // usage) doesn't live on the engine — it lives on ZPL Main behind
+    // /api/user/me. Pre-fix `getUsage()` hit `engine.zeropointlogic.io/usage`
+    // which never existed (returned 404 "Not found"). CLI v1.1.7 made the
+    // same move; SDK is now consistent.
+    this.accountBaseUrl = (config.accountBaseUrl || 'https://zeropointlogic.io').replace(/\/$/, '');
     this.timeout = config.timeout || 30000;
     this.debug = config.debug || false;
 
@@ -348,14 +357,74 @@ export class ZPLClient {
   }
 
   /**
-   * Get current usage and quota information
+   * Get current usage and quota information.
+   *
+   * AUDIT 2026-05-14 (v2.0.3): re-routed from `engine.zeropointlogic.io/usage`
+   * (which never existed and returned 404) to `zeropointlogic.io/api/user/me`.
+   * CLI made the same switch in v1.1.7. The response shape is normalised
+   * back to the SDK's `Usage` interface so v2.0.x callers see no breaking
+   * change.
    *
    * @param timeout - Optional timeout override
    * @returns Usage object with current plan and token usage
    * @throws {ZPLError} on API error
    */
   async getUsage(timeout?: number): Promise<Usage> {
-    return this._request<Usage>('/usage', { method: 'GET' }, { timeout });
+    type UserMeResponse = {
+      user: { id: string; email: string; name: string | null; role: string; plan: string; plan_name: string };
+      tokens: {
+        remaining: number;
+        used_this_month: number;
+        monthly_quota: number;
+        bonus_balance: number;
+        total_available_this_cycle: number;
+        percent_used: number;
+        source?: string;
+      };
+      limits?: { max_d: number; max_keys: number };
+    };
+
+    // Direct fetch to ZPL Main (not via this._request which is engine-scoped).
+    // Same retry policy + timeout would be nice but the endpoint is so
+    // reliable + cheap that a single attempt is enough. Mirrors CLI behaviour.
+    const url = `${this.accountBaseUrl}/api/user/me`;
+    const controller = new AbortController();
+    const effectiveTimeout = timeout ?? this.timeout;
+    const timer = setTimeout(() => controller.abort(), effectiveTimeout);
+    try {
+      const res = await this.fetchFn(url, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${this.apiKey}`,
+          'User-Agent': this.userAgent,
+          'X-ZPL-Client': this.zplClientType,
+          'X-ZPL-Client-Version': this.zplClientVersion,
+        },
+        signal: controller.signal,
+      });
+      if (!res.ok) {
+        const body = await res.text().catch(() => '');
+        throw new Error(`ZPL Main /api/user/me returned ${res.status}: ${body.slice(0, 200)}`);
+      }
+      const data = (await res.json()) as UserMeResponse;
+
+      // Map ZPL Main /api/user/me → SDK Usage interface.
+      const usage: Usage = {
+        plan: data.user.plan,
+        // Engine "usage" semantically = monthly_quota − remaining, but we
+        // also expose the bonus balance separately so callers can show it.
+        tokensUsed: data.tokens.used_this_month,
+        tokensRemaining: data.tokens.remaining,
+        tokensQuota: data.tokens.monthly_quota,
+        bonusBalance: data.tokens.bonus_balance,
+        percentUsed: data.tokens.percent_used,
+        maxDimension: data.limits?.max_d,
+        retrievedAt: new Date(),
+      };
+      return usage;
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
   /**

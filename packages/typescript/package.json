@@ -1,6 +1,6 @@
 {
   "name": "@zeropointlogic/sdk",
-  "version": "2.0.2",
+  "version": "2.0.3",
   "description": "Official TypeScript SDK for the ZPL Engine API - AI Neutrality Index calculations for crypto, forex, commodities, and game economy analysis",
   "type": "module",
   "main": "./dist/index.js",
