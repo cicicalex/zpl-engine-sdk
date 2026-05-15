@@ -7,22 +7,31 @@ import type { BinaryMatrix, BiasLevel, AINStatus, ComputeResult } from './types.
 import { ZPLValidationError } from './errors.js';
 
 /**
- * Convert an array of prices to a binary matrix
- * using a sliding window and return direction encoding
+ * Convert an array of prices to a binary matrix using a sliding window
+ * over return direction (1 = price up, 0 = down or unchanged).
  *
- * @param prices - Array of numerical price values
- * @param window - Window size for comparison (default: 20)
- * @returns Binary matrix (0 = price down/same, 1 = price up)
- * @throws {ZPLValidationError} if prices array is too small
+ * Output shape is `(prices.length - window) × window`. For a *square*
+ * matrix (which `ZPLClient.compute` requires) supply exactly
+ * `2 * window` prices — e.g. window=20 → 40 prices → 20x20.
+ *
+ * @param prices - Numerical price series, ordered oldest → newest
+ * @param window - Sliding-window size (default: 20)
+ * @returns Binary matrix; empty rows are not possible because we throw first
+ * @throws {ZPLValidationError} if prices.length is not strictly greater than window
  */
 export function pricesToMatrix(prices: number[], window = 20): BinaryMatrix {
   if (!Array.isArray(prices) || prices.length < 2) {
     throw new ZPLValidationError('Prices array must have at least 2 elements');
   }
 
-  if (prices.length < window) {
+  // Pre-fix: this used `prices.length < window`, which let
+  // `prices.length === window` slip through and produce an empty matrix.
+  // Callers then hit `matrix[0].length` on `[]` → TypeError. Now we require
+  // strictly more, so the loop below produces at least one row.
+  if (prices.length <= window) {
     throw new ZPLValidationError(
-      `Prices array length (${prices.length}) must be at least window size (${window})`
+      `Prices array length (${prices.length}) must be greater than window size (${window}). ` +
+        `For a square ${window}x${window} matrix supply ${2 * window} prices.`
     );
   }
 

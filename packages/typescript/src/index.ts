@@ -9,9 +9,12 @@
  *
  * const client = new ZPLClient({ apiKey: 'zpl_xxx' });
  *
- * // Analyze price data for bias
- * const prices = [100, 102, 101, 103, 105];
- * const matrix = pricesToMatrix(prices);
+ * // Analyze price data for bias.
+ * // pricesToMatrix(prices, window) needs at least 2 * window prices to
+ * // build a square (window x window) BinaryMatrix. Default window = 20,
+ * // so the smallest meaningful prices array has 40 entries.
+ * const prices = Array.from({ length: 40 }, (_, i) => 100 + Math.sin(i / 3));
+ * const matrix = pricesToMatrix(prices); // 20x20 binary matrix
  * const result = await client.compute({ matrix, samples: 1000 });
  *
  * console.log(`AIN: ${result.ain}`);      // 0.73
