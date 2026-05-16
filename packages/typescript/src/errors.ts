@@ -129,6 +129,49 @@ export class ZPLValidationError extends ZPLError {
 }
 
 /**
+ * Thrown when the SDK's reported client version is below the per-client
+ * floor configured on the engine (`ZPL_MIN_VERSION_SDK_TYPESCRIPT`). The
+ * engine responds with HTTP 426 Upgrade Required and a structured body
+ * carrying the upgrade command, minimum version and current version.
+ *
+ * Unlike the CLI / MCP shims, an SDK is just a library imported into
+ * someone else's code — we can't self-reinstall. Surface a clear
+ * actionable message instead so caller code can either catch and prompt
+ * the user to bump the dependency, or fail loudly.
+ */
+export class ZPLUpgradeRequiredError extends ZPLError {
+  constructor(
+    message?: string,
+    public upgradeCommand?: string,
+    public minimumVersion?: string,
+    public currentVersion?: string,
+    details?: Record<string, unknown>
+  ) {
+    const versionLine =
+      currentVersion && minimumVersion
+        ? `Current: ${currentVersion}, minimum: ${minimumVersion}.`
+        : '';
+    const cmdLine = upgradeCommand
+      ? `Upgrade with: ${upgradeCommand}`
+      : 'Upgrade with: npm i @zeropointlogic/sdk@latest';
+    const composed =
+      message ??
+      [
+        'ZPL SDK version is below the supported floor — engine returned 426 Upgrade Required.',
+        versionLine,
+        cmdLine,
+        '',
+        'See https://zeropointlogic.io/docs/sdk for the current version.',
+      ]
+        .filter(Boolean)
+        .join('\n');
+    super(composed, 'ZPL_UPGRADE_REQUIRED', 426, details);
+    this.name = 'ZPLUpgradeRequiredError';
+    Object.setPrototypeOf(this, ZPLUpgradeRequiredError.prototype);
+  }
+}
+
+/**
  * Thrown when network request times out
  */
 export class ZPLTimeoutError extends ZPLError {
@@ -184,6 +227,13 @@ export function isZPLRateLimitError(error: unknown): error is ZPLRateLimitError 
  */
 export function isZPLQuotaExceededError(error: unknown): error is ZPLQuotaExceededError {
   return error instanceof ZPLQuotaExceededError;
+}
+
+/**
+ * Type guard for ZPLUpgradeRequiredError
+ */
+export function isZPLUpgradeRequiredError(error: unknown): error is ZPLUpgradeRequiredError {
+  return error instanceof ZPLUpgradeRequiredError;
 }
 
 /**
@@ -263,6 +313,21 @@ export function parseApiError(
         quotaErr.tokensRequired as number | undefined,
         quotaErr.tokensRemaining as number | undefined,
         quotaErr.details as Record<string, unknown> | undefined
+      );
+    }
+
+    case 426: {
+      // Forced-upgrade gate (engine: `check_min_supported_version`). Body
+      // is the flat shape { upgrade_command, minimum_version,
+      // current_version, message } — read the fields off `errorData`
+      // directly, no wrapper.
+      const upgradeErr = errorData as Record<string, unknown>;
+      return new ZPLUpgradeRequiredError(
+        message || (upgradeErr.message as string | undefined),
+        upgradeErr.upgrade_command as string | undefined,
+        upgradeErr.minimum_version as string | undefined,
+        upgradeErr.current_version as string | undefined,
+        typeof errorData === 'object' ? (errorData as Record<string, unknown>) : undefined
       );
     }
 
