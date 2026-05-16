@@ -15,6 +15,7 @@ from zeropointlogic.exceptions import (
     ZPLAuthError,
     ZPLQuotaError,
     ZPLRateLimitError,
+    ZPLUpgradeRequiredError,
     ZPLValidationError,
     ZPLNetworkError,
 )
@@ -254,6 +255,27 @@ class BaseZPLClient:
         elif status_code == 400:
             field = data.get("field")
             raise ZPLValidationError(f"Validation error: {error_msg}", field=field, status_code=status_code)
+
+        elif status_code == 426:
+            # Forced-upgrade gate: engine's check_min_supported_version
+            # rejects callers below ZPL_MIN_VERSION_SDK_PYTHON. Body is a
+            # flat object with upgrade_command / minimum_version /
+            # current_version / message — surface them as instance fields
+            # so caller code can branch on them.
+            default_cmd = "pip install -U zeropointlogic"
+            composed = data.get("message") or (
+                f"ZPL SDK version {data.get('current_version', '?')} is below the "
+                f"supported floor (minimum {data.get('minimum_version', '?')}). "
+                f"Upgrade with: {data.get('upgrade_command', default_cmd)}"
+            )
+            raise ZPLUpgradeRequiredError(
+                composed,
+                upgrade_command=data.get("upgrade_command", default_cmd),
+                minimum_version=data.get("minimum_version"),
+                current_version=data.get("current_version"),
+                status_code=status_code,
+                response_data=data,
+            )
 
         elif status_code == 429:
             retry_after = int(data.get("retry_after", 60))
