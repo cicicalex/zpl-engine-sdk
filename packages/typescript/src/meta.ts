@@ -9,7 +9,7 @@
  *
  * @module meta
  */
-export const SDK_VERSION = '2.0.2';
+export const SDK_VERSION = '2.0.6';
 
 /** ADR 0002 default for `X-ZPL-Client` from this package. */
 export const ZPL_SDK_CLIENT_TYPE = 'sdk-typescript' as const;

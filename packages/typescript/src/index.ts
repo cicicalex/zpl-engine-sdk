@@ -51,6 +51,7 @@ export {
   ZPLAuthError,
   ZPLRateLimitError,
   ZPLQuotaExceededError,
+  ZPLUpgradeRequiredError,
   ZPLValidationError,
   ZPLTimeoutError,
   ZPLNetworkError,
@@ -58,6 +59,7 @@ export {
   isZPLAuthError,
   isZPLRateLimitError,
   isZPLQuotaExceededError,
+  isZPLUpgradeRequiredError,
   parseApiError,
   parseEngineHttpError,
 } from './errors.js';
