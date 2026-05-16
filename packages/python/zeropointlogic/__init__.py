@@ -29,6 +29,7 @@ from zeropointlogic.exceptions import (
     ZPLAuthError,
     ZPLRateLimitError,
     ZPLQuotaError,
+    ZPLUpgradeRequiredError,
     ZPLValidationError,
     ZPLNetworkError,
 )
@@ -57,6 +58,7 @@ __all__ = [
     "ZPLAuthError",
     "ZPLRateLimitError",
     "ZPLQuotaError",
+    "ZPLUpgradeRequiredError",
     "ZPLValidationError",
     "ZPLNetworkError",
     "matrix_from_prices",

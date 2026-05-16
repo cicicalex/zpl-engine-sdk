@@ -82,3 +82,31 @@ class ZPLNetworkError(ZPLError):
     """Raised when network/connection errors occur."""
 
     pass
+
+
+class ZPLUpgradeRequiredError(ZPLError):
+    """Raised when this SDK build is below the engine's configured floor (426).
+
+    The engine returns HTTP 426 Upgrade Required with a structured body
+    carrying ``upgrade_command``, ``minimum_version`` and ``current_version``
+    when ``ZPL_MIN_VERSION_SDK_PYTHON`` is set above the version reported
+    in the ``X-ZPL-Client-Version`` header.
+
+    Unlike the CLI / MCP shims, the SDK is just a library imported into
+    someone else's code — it can't reinstall itself. We surface the
+    upgrade metadata as instance fields so caller code can either catch
+    and prompt the user to bump the dependency, or fail loudly.
+    """
+
+    def __init__(
+        self,
+        message: str,
+        upgrade_command: str | None = None,
+        minimum_version: str | None = None,
+        current_version: str | None = None,
+        **kwargs,
+    ):
+        super().__init__(message, **kwargs)
+        self.upgrade_command = upgrade_command
+        self.minimum_version = minimum_version
+        self.current_version = current_version
