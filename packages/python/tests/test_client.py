@@ -31,9 +31,20 @@ class TestZPLClientInit(unittest.TestCase):
             ZPLClient(api_key="")
 
     def test_init_custom_base_url(self):
-        """Test initialization with custom base URL."""
-        client = ZPLClient(api_key="zpl_u_test_a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6", base_url="http://localhost:8000/")
-        assert client.base_url == "http://localhost:8000"
+        """Test initialization with custom base URL on the allowlisted domain.
+
+        Non-allowlisted URLs (e.g. http://localhost) are silently rejected and
+        fall back to the production engine — see engine_normalize.py. The
+        previous test asserted a non-allowlisted URL would be honoured, which
+        regressed when URL hardening landed. Switching to a real subdomain
+        keeps the "custom base URL" semantics intact without bypassing the
+        production guard.
+        """
+        client = ZPLClient(
+            api_key="zpl_u_test_a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6",
+            base_url="https://engine-staging.zeropointlogic.io/",
+        )
+        assert client.base_url == "https://engine-staging.zeropointlogic.io"
 
     def test_init_timeout_and_retries(self):
         """Test initialization with custom timeout and retries."""
