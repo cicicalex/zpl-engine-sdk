@@ -588,6 +588,6 @@ Contributions welcome! Please:
 
 ## Acknowledgments
 
-Built by Alex Cicic for the Zero Point Logic platform.
+Built by Alex for the Zero Point Logic platform.
 
 Inspired by the OpenAI Python SDK architecture for professional quality and usability.

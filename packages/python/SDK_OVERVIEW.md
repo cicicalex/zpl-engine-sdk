@@ -7,7 +7,7 @@ A **production-grade Python SDK** for the Zero Point Logic Engine API, implement
 **Status**: Complete and ready for production
 **Version**: 1.0.0
 **License**: MIT
-**Author**: Alex Cicic
+**Author**: Alex
 
 ## Project Statistics
 

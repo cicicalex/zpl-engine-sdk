@@ -2,7 +2,7 @@
 
 from zeropointlogic.version import __version__
 
-__author__ = "Alex Cicic"
+__author__ = "Alex"
 __license__ = "MIT"
 
 from zeropointlogic.client import ZPLClient, AsyncZPLClient, ZPL_SDK_CLIENT_TYPE

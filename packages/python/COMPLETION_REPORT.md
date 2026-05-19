@@ -259,6 +259,6 @@ The SDK is ready for:
 The Zero Point Logic Engine Python SDK is fully implemented, documented, tested, and ready for production use. All requirements have been met and exceeded with quality comparable to industry-standard SDKs like OpenAI's Python SDK.
 
 **Build Date:** 6 April 2026  
-**Author:** Alex Cicic  
+**Publisher:** Zero Point Logic  
 **License:** MIT  
 **Version:** 1.0.0
