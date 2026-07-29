@@ -3,7 +3,7 @@
 import random
 from typing import Optional
 
-from zeropointlogic.models import AIStatusType
+from zeropointlogic.models import AINStatusType, StabilityStatusType
 
 
 def matrix_from_prices(prices: list[float], window: int = 10) -> list[list[int]]:
@@ -189,7 +189,7 @@ def interpret_ain(ain: float, verbosity: str = "short") -> str:
     """Get human-readable interpretation of AIN score.
 
     Args:
-        ain: AI Neutrality Index value (0-1)
+        ain: AI Neutrality Index value (float 0.0-1.0, 6 decimals)
         verbosity: 'short' for one word, 'medium' for phrase, 'long' for explanation
 
     Returns:
@@ -237,21 +237,32 @@ def interpret_ain(ain: float, verbosity: str = "short") -> str:
         return long
 
 
-def get_status_color(status: AIStatusType) -> str:
+def get_status_color(status: AINStatusType | StabilityStatusType) -> str:
     """Get recommended color for status display.
 
+    Accepts a value from either enum — the `ain_status` band or the
+    `status` stability regime. `CRITICAL_BIAS` is gone (it belonged to
+    neither enum) and the missing bands / regimes were added.
+
     Args:
-        status: AI status type
+        status: `ain_status` band or `status` regime
 
     Returns:
         Color code (green, yellow, orange, red)
     """
     color_map = {
+        # ain_status — AIN band
         "CERTIFIED_NEUTRAL": "green",
-        "STABLE": "green",
+        "HIGHLY_NEUTRAL": "green",
+        "NEUTRAL": "green",
         "MODERATE_BIAS": "yellow",
-        "HIGH_BIAS": "orange",
-        "CRITICAL_BIAS": "red",
+        "SIGNIFICANT_BIAS": "orange",
+        "HIGH_BIAS": "red",
+        # status — stability regime
+        "STABLE": "green",
+        "ACTIVE": "yellow",
+        "INHIBITED_HIGH": "orange",
+        "INHIBITED_LOW": "orange",
     }
     return color_map.get(status, "gray")
 

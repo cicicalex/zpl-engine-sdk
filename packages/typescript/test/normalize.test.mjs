@@ -16,14 +16,14 @@ test('normalizeEngineComputeResult maps snake_case engine JSON', () => {
     p_output: 0.51,    // still in wire response, dropped by normaliser
     deviation: 0.02,   // same
     status: 'STABLE',
-    ain_status: 'STABLE',
+    ain_status: 'NEUTRAL',
     samples: 1000,
     tokens_used: 2,
     compute_ms: 14.5,
   });
   assert.equal(r.ain, 0.82);
   assert.equal(r.status, 'STABLE');
-  assert.equal(r.ainStatus, 'STABLE');
+  assert.equal(r.ainStatus, 'NEUTRAL');
   assert.equal(r.tokensUsed, 2);
   // tokens_remaining absent from input → undefined on result.
   assert.equal(r.tokensRemaining, undefined);
@@ -41,6 +41,28 @@ test('normalizeEngineComputeResult forwards tokensRemaining when engine returns 
     tokens_remaining: 4999,
   });
   assert.equal(r.tokensRemaining, 4999);
+});
+
+// The two status enums are different fields with different values.
+// Pre-fix `INHIBITED_HIGH` was not in the accepted list and got rewritten
+// to `STABLE` — the SDK reported the opposite of the engine.
+test('normalizeEngineComputeResult keeps the inhibited stability regimes', () => {
+  for (const s of ['STABLE', 'ACTIVE', 'INHIBITED_HIGH', 'INHIBITED_LOW']) {
+    const r = normalizeEngineComputeResult({ ain: 0.5, status: s, tokens_used: 1 });
+    assert.equal(r.status, s);
+  }
+  // Plain `INHIBITED` is not a valid value; it must not pass through.
+  const bad = normalizeEngineComputeResult({ ain: 0.5, status: 'INHIBITED', tokens_used: 1 });
+  assert.equal(bad.status, 'STABLE');
+  // `status` values are not accepted as `ain_status` and vice versa.
+  const mixed = normalizeEngineComputeResult({
+    ain: 0.5,
+    status: 'CERTIFIED_NEUTRAL',
+    ain_status: 'STABLE',
+    tokens_used: 1,
+  });
+  assert.equal(mixed.status, 'STABLE');
+  assert.equal(mixed.ainStatus, undefined);
 });
 
 test('redactSecretsInText masks zpl keys', () => {

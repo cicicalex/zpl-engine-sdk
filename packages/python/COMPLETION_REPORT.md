@@ -202,7 +202,7 @@ client = ZPLClient(api_key="zpl_u_xxx")
 prices = [100, 105, 102, 110]
 matrix = matrix_from_prices(prices, window=2)
 result = client.compute(matrix=matrix, samples=1000)
-print(f"AIN: {result.ain:.3f}, Status: {result.status}")
+print(f"AIN: {result.ain:.6f}, Status: {result.status}")
 ```
 
 ### Asynchronous Usage

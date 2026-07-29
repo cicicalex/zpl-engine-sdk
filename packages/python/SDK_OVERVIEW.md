@@ -73,14 +73,13 @@ packages/python/
 ```python
 @dataclass
 class ComputeResult:
-    ain: float                  # 0-1, higher = more neutral
-    p_output: float             # Model probability
-    deviation: float            # Std deviation
-    status: AIStatusType        # 5 status levels
-    tokens_used: int            # Tokens consumed
-    tokens_remaining: int       # Tokens left
-    matrix_size: int            # N for N×N matrix
-    samples: int                # Sample count
+    ain: float                     # float 0.0-1.0, 6 decimals, higher = more neutral
+    status: StabilityStatusType    # STABLE | ACTIVE | INHIBITED_HIGH | INHIBITED_LOW
+    ain_status: AINStatusType      # AIN band — a different field from `status`
+    tokens_used: int               # Tokens consumed
+    tokens_remaining: int          # Tokens left
+    matrix_size: int               # N for N×N matrix
+    samples: int                   # Sample count
 ```
 
 **Methods**: `is_neutral()`, `is_stable()`, `has_bias()`
@@ -199,7 +198,7 @@ matrix = matrix_from_prices(prices, window=2)
 
 # Analyze
 result = client.compute(matrix=matrix, samples=1000)
-print(f"AIN: {result.ain:.3f}, Status: {result.status}")
+print(f"AIN: {result.ain:.6f}, Status: {result.status}")
 ```
 
 ### Async Usage
@@ -267,11 +266,20 @@ See **[zeropointlogic.io/pricing](https://zeropointlogic.io/pricing)** for curre
 
 ## Status Values
 
-- `CERTIFIED_NEUTRAL` (AIN >= 0.85) — Perfect distribution
-- `STABLE` (AIN >= 0.70) — High neutrality
-- `MODERATE_BIAS` (AIN >= 0.55) — Some bias
-- `HIGH_BIAS` (AIN >= 0.40) — Significant bias
-- `CRITICAL_BIAS` (AIN < 0.25) — Extreme bias
+Two separate fields — `ain_status` (AIN band) and `status` (stability
+regime). They are never interchangeable.
+
+`ain_status`:
+
+- `CERTIFIED_NEUTRAL` (AIN >= 0.96)
+- `HIGHLY_NEUTRAL` (AIN >= 0.90)
+- `NEUTRAL` (AIN >= 0.80)
+- `MODERATE_BIAS` (AIN >= 0.60)
+- `SIGNIFICANT_BIAS` (AIN >= 0.40)
+- `HIGH_BIAS` (AIN < 0.40)
+
+`status`: `STABLE` · `ACTIVE` · `INHIBITED_HIGH` · `INHIBITED_LOW`
+(plain `INHIBITED` does not exist).
 
 ## Configuration Options
 

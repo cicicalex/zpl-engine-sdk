@@ -33,7 +33,8 @@ zpl-ts-sdk/
 ### src/types.ts
 **Exports:** 25+ TypeScript interfaces and types
 
-- `AINStatus` - Status values: CERTIFIED_NEUTRAL, STABLE, MODERATE_BIAS, HIGH_BIAS, CRITICAL_BIAS
+- `AINStatus` - `ain_status` band: CERTIFIED_NEUTRAL, HIGHLY_NEUTRAL, NEUTRAL, MODERATE_BIAS, SIGNIFICANT_BIAS, HIGH_BIAS
+- `StabilityStatus` - `status` regime: STABLE, ACTIVE, INHIBITED_HIGH, INHIBITED_LOW
 - `ComputeResult` - Single computation result with AIN score
 - `BatchComputeResult` - Multiple computation results
 - `Usage` - Token quota information

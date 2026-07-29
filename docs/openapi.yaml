@@ -60,9 +60,7 @@ paths:
         content:
           application/json:
             schema:
-              oneOf:
-                - $ref: "#/components/schemas/ComputeMatrixRequest"
-                - $ref: "#/components/schemas/ComputeBiasRequest"
+              $ref: "#/components/schemas/ComputeRequest"
       responses:
         "200":
           description: Compute result
@@ -175,41 +173,25 @@ components:
           type: boolean
       additionalProperties: true
 
-    ComputeMatrixRequest:
-      type: object
-      required: [matrix, samples]
-      properties:
-        matrix:
-          type: array
-          minItems: 3
-          maxItems: 100
-          items:
-            type: array
-            minItems: 3
-            maxItems: 100
-            items:
-              type: integer
-              enum: [0, 1]
-          description: |
-            Square N×N binary matrix. The engine enforces 3 ≤ N ≤ 100 and
-            returns HTTP 400 `"D must be between 3 and 100"` otherwise.
-            Official SDKs also reject non-square shapes client-side.
-        samples:
-          type: integer
-          minimum: 100
-          maximum: 50000
-          default: 1000
-
-    ComputeBiasRequest:
+    ComputeRequest:
       type: object
       required: [d, bias]
+      description: |
+        The only body `POST /compute` accepts. There is **no `matrix`
+        parameter** — `d` IS the matrix dimension. Clients that build a
+        binary matrix derive `d` and `bias` from it before posting.
       properties:
         d:
           type: integer
           minimum: 3
           maximum: 100
+          description: |
+            Matrix dimension. The engine returns HTTP 400
+            `"D must be between 3 and 100"` outside this range.
+            Accepted aliases: `N`, `n`, `dimension`.
         bias:
           type: number
+          format: double
           minimum: 0
           maximum: 1
         samples:
@@ -223,19 +205,55 @@ components:
       properties:
         d:
           type: integer
+          minimum: 3
+          maximum: 100
         bias:
           type: number
+          format: double
+          minimum: 0
+          maximum: 1
         p_output:
           type: number
+          format: double
+          minimum: 0
+          maximum: 1
+          description: |
+            `0.500` means perfect balance.
         ain:
           type: number
+          format: double
+          minimum: 0
+          maximum: 1
+          example: 0.932412
+          description: |
+            AI Neutrality Index on the 0.0 – 1.0 scale, 6 decimals.
+            Display as a percentage with `(ain * 100).toFixed(2)`; do NOT
+            round to an integer — that discards 4 of the 6 decimals and
+            with them the reproducibility the value exists for. The
+            range is never `0.1 – 99.9`.
         ain_status:
           type: string
+          description: |
+            AIN band — quality of the balance. A DIFFERENT field from
+            `status`.
+          enum:
+            - CERTIFIED_NEUTRAL   # ain >= 0.96
+            - HIGHLY_NEUTRAL      # ain >= 0.90
+            - NEUTRAL             # ain >= 0.80
+            - MODERATE_BIAS       # ain >= 0.60
+            - SIGNIFICANT_BIAS    # ain >= 0.40
+            - HIGH_BIAS           # ain <  0.40
         deviation:
           type: number
+          format: double
+          minimum: 0
+          maximum: 0.5
         status:
           type: string
-          description: Categorical status (e.g. STABLE, HIGH_BIAS)
+          description: |
+            Stability regime. A DIFFERENT field from `ain_status`.
+            Plain `INHIBITED` is not a value.
+          enum: [STABLE, ACTIVE, INHIBITED_HIGH, INHIBITED_LOW]
         samples:
           type: integer
         tokens_used:
@@ -266,14 +284,28 @@ components:
       properties:
         bias:
           type: number
+          format: double
+          minimum: 0
+          maximum: 1
         p_output:
           type: number
+          format: double
+          minimum: 0
+          maximum: 1
         ain:
           type: number
+          format: double
+          minimum: 0
+          maximum: 1
+          description: Float 0.0 – 1.0, 6 decimals. Do not round.
         deviation:
           type: number
+          format: double
+          minimum: 0
+          maximum: 0.5
         status:
           type: string
+          enum: [STABLE, ACTIVE, INHIBITED_HIGH, INHIBITED_LOW]
 
     EngineError:
       type: object

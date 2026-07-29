@@ -119,13 +119,27 @@ console.log(`Is Neutral: ${result.isNeutral}`); // true
 
 ### AIN (AI Neutrality Index)
 
-A mathematical score (0-1) indicating how neutral/unbiased data is:
+A float on the **0.0 – 1.0** scale with **6 decimals**, indicating how
+neutral/unbiased data is. Display it as a percentage with
+`(ain * 100).toFixed(2)` — never `Math.round(ain * 100)`, which discards
+4 of the 6 decimals.
 
-- **0.8-1.0**: Excellent neutrality (CERTIFIED_NEUTRAL)
-- **0.7-0.8**: Good neutrality (STABLE)
-- **0.5-0.7**: Moderate bias (MODERATE_BIAS)
-- **0.3-0.5**: High bias (HIGH_BIAS)
-- **0.0-0.3**: Critical bias (CRITICAL_BIAS)
+### The two status fields — do not mix them
+
+`ainStatus` (`ain_status` on the wire) is the **AIN band**:
+
+| `ainStatus` | `ain` |
+|---|---|
+| `CERTIFIED_NEUTRAL` | >= 0.96 |
+| `HIGHLY_NEUTRAL` | >= 0.90 |
+| `NEUTRAL` | >= 0.80 |
+| `MODERATE_BIAS` | >= 0.60 |
+| `SIGNIFICANT_BIAS` | >= 0.40 |
+| `HIGH_BIAS` | < 0.40 |
+
+`status` is the **stability regime**, a different field with different
+values: `STABLE` · `ACTIVE` · `INHIBITED_HIGH` · `INHIBITED_LOW`.
+Plain `INHIBITED` does not exist.
 
 ### Binary Matrix
 

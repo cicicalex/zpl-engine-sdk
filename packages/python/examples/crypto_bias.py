@@ -44,7 +44,7 @@ def analyze_crypto_prices(symbol: str = "BTC", days: int = 30) -> None:
 
     # Display results
     print(f"\nAnalysis Results:")
-    print(f"  AIN Score: {result.ain:.3f}")
+    print(f"  AIN Score: {result.ain:.6f}")
     print(f"  Status: {result.status}")
     print(f"  Interpretation: {interpret_ain(result.ain, 'medium')}")
     print(f"  Probability Output: {result.p_output:.3f}")
@@ -107,14 +107,14 @@ def batch_analyze_cryptocurrencies() -> None:
         result = client.compute(matrix=matrix, samples=500)
         results[symbol] = result
 
-        print(f"{symbol:5} | AIN: {result.ain:.3f} | Status: {result.status:20} | {interpret_ain(result.ain, 'short')}")
+        print(f"{symbol:5} | AIN: {result.ain:.6f} | Status: {result.status:20} | {interpret_ain(result.ain, 'short')}")
 
     # Summary
     print("\n" + "=" * 50)
     print("Summary:")
     neutral_count = sum(1 for r in results.values() if r.is_neutral())
     print(f"  Neutral markets: {neutral_count}/{len(symbols)}")
-    print(f"  Average AIN: {sum(r.ain for r in results.values()) / len(results):.3f}")
+    print(f"  Average AIN: {sum(r.ain for r in results.values()) / len(results):.6f}")
 
     # Tokens remaining
     usage = client.get_usage()

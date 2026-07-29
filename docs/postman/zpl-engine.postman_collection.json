@@ -30,22 +30,6 @@
       }
     },
     {
-      "name": "POST /compute (matrix)",
-      "request": {
-        "method": "POST",
-        "header": [
-          { "key": "Authorization", "value": "Bearer {{apiKey}}", "type": "text" },
-          { "key": "X-API-Key", "value": "{{apiKey}}", "type": "text" },
-          { "key": "Content-Type", "value": "application/json", "type": "text" }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"matrix\": [[0,1],[1,0]],\n  \"samples\": 500\n}"
-        },
-        "url": "{{baseUrl}}/compute"
-      }
-    },
-    {
       "name": "POST /compute (d/bias)",
       "request": {
         "method": "POST",

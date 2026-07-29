@@ -5,19 +5,41 @@ from typing import Literal
 from datetime import datetime
 
 
-AIStatusType = Literal[
+# `ain_status` — quality of the balance, derived from `ain`.
+# Bands (inclusive lower bound): CERTIFIED_NEUTRAL >= 0.96,
+# HIGHLY_NEUTRAL >= 0.90, NEUTRAL >= 0.80, MODERATE_BIAS >= 0.60,
+# SIGNIFICANT_BIAS >= 0.40, HIGH_BIAS < 0.40.
+#
+# Pre-fix a single `AIStatusType` mixed these values with the `status`
+# values (`STABLE`), invented a `CRITICAL_BIAS` member no engine returns,
+# and omitted HIGHLY_NEUTRAL / NEUTRAL / SIGNIFICANT_BIAS entirely.
+AINStatusType = Literal[
     "CERTIFIED_NEUTRAL",
-    "STABLE",
+    "HIGHLY_NEUTRAL",
+    "NEUTRAL",
     "MODERATE_BIAS",
+    "SIGNIFICANT_BIAS",
     "HIGH_BIAS",
-    "CRITICAL_BIAS",
 ]
+
+# `status` — stability regime. A DIFFERENT field from `ain_status`.
+# Plain "INHIBITED" does not exist; only the _HIGH / _LOW variants do.
+StabilityStatusType = Literal[
+    "STABLE",
+    "ACTIVE",
+    "INHIBITED_HIGH",
+    "INHIBITED_LOW",
+]
+
+# Backwards-compatible alias for the old (incorrect) single union. It now
+# points at the `ain_status` band enum, which is what most callers meant.
+AIStatusType = AINStatusType
 
 BiasLevel = Literal["none", "low", "moderate", "high", "critical"]
 
 
 def ain_to_bias_level(ain: float) -> BiasLevel:
-    """Convert AIN score (0-1) into a bias-level classification.
+    """Convert AIN score (float 0.0-1.0) into a bias-level classification.
 
     Mirrors `ainToBiasLevel` in the TypeScript SDK so users get the same
     label whichever language they choose.
@@ -57,24 +79,29 @@ class ComputeResult:
     `client.get_usage()` for live quota.
 
     Attributes:
-        ain: AI Neutrality Index (0-1), higher is more neutral
-        status: Classification of bias level (CERTIFIED_NEUTRAL, STABLE, etc.)
+        ain: AI Neutrality Index — float on the 0.0-1.0 scale with 6
+            decimals, higher is more neutral. Display as a percentage with
+            ``f"{ain * 100:.2f}"``; never ``round(ain * 100)``, which
+            discards 4 of the 6 decimals.
+        status: Stability regime (STABLE / ACTIVE / INHIBITED_HIGH /
+            INHIBITED_LOW). NOT the AIN band — see `ain_status`.
         tokens_used: Number of tokens consumed by this request
         tokens_remaining: Tokens left when the engine actually returns it,
             else None.
         matrix_size: Size of input matrix (N×N)
         samples: Number of samples used
-        ain_status: Engine AIN band label when present
+        ain_status: AIN band label when present (CERTIFIED_NEUTRAL …
+            HIGH_BIAS). A different field from `status`.
         compute_ms: Server-side compute time when present
     """
 
     ain: float
-    status: AIStatusType
+    status: StabilityStatusType
     tokens_used: int
     tokens_remaining: int | None = None
     matrix_size: int | None = None
     samples: int | None = None
-    ain_status: str | None = None
+    ain_status: AINStatusType | None = None
     compute_ms: float | None = None
 
     def is_neutral(self, threshold: float = 0.7) -> bool:
@@ -89,20 +116,28 @@ class ComputeResult:
         return self.ain >= threshold
 
     def is_stable(self) -> bool:
-        """Check if status indicates stability.
+        """Check if the stability regime indicates stability.
 
         Returns:
-            True if status is CERTIFIED_NEUTRAL or STABLE
+            True if status is STABLE. (Pre-fix this also accepted
+            CERTIFIED_NEUTRAL, which belongs to `ain_status`, not
+            `status`.)
         """
-        return self.status in ("CERTIFIED_NEUTRAL", "STABLE")
+        return self.status == "STABLE"
 
     def has_bias(self) -> bool:
-        """Check if status indicates bias.
+        """Check if the AIN band indicates bias.
+
+        Reads `ain_status`, not `status`: the bias bands live on
+        `ain_status`. Falls back to the `ain` value when the engine did
+        not send a band.
 
         Returns:
-            True if status contains BIAS
+            True if the AIN band is one of the *_BIAS values.
         """
-        return "BIAS" in self.status
+        if self.ain_status is not None:
+            return "BIAS" in self.ain_status
+        return self.ain < 0.80
 
     @property
     def bias_level(self) -> BiasLevel:
@@ -119,7 +154,9 @@ class ComputeResult:
             if self.tokens_remaining is not None
             else "tokens=n/a (call get_usage())"
         )
-        return f"ComputeResult(ain={self.ain:.3f}, status={self.status}, used={self.tokens_used}, {rem})"
+        # 6 decimals: `ain` is delivered on the 0.0-1.0 scale with 6
+        # decimals and the default repr must not silently truncate it.
+        return f"ComputeResult(ain={self.ain:.6f}, status={self.status}, used={self.tokens_used}, {rem})"
 
 
 @dataclass

@@ -196,15 +196,24 @@ class TestGetStatusColor(unittest.TestCase):
     """Test get_status_color function."""
 
     def test_neutral_colors(self):
-        """Test colors for neutral statuses."""
+        """Test colors for neutral ain_status bands and the STABLE regime."""
         assert get_status_color("CERTIFIED_NEUTRAL") == "green"
+        assert get_status_color("HIGHLY_NEUTRAL") == "green"
+        assert get_status_color("NEUTRAL") == "green"
         assert get_status_color("STABLE") == "green"
 
     def test_bias_colors(self):
-        """Test colors for biased statuses."""
+        """Test colors for the biased ain_status bands."""
         assert get_status_color("MODERATE_BIAS") == "yellow"
-        assert get_status_color("HIGH_BIAS") == "orange"
-        assert get_status_color("CRITICAL_BIAS") == "red"
+        assert get_status_color("SIGNIFICANT_BIAS") == "orange"
+        assert get_status_color("HIGH_BIAS") == "red"
+
+    def test_inhibited_regimes(self):
+        """INHIBITED_HIGH / INHIBITED_LOW are status values; plain
+        INHIBITED is not and must fall through to the default."""
+        assert get_status_color("INHIBITED_HIGH") == "orange"
+        assert get_status_color("INHIBITED_LOW") == "orange"
+        assert get_status_color("INHIBITED") == "gray"
 
 
 class TestChunkMatrices(unittest.TestCase):

@@ -28,6 +28,7 @@ export { ZPLClient } from './client.js';
 // Types
 export type {
   AINStatus,
+  StabilityStatus,
   BiasLevel,
   BinaryMatrix,
   ComputeResult,

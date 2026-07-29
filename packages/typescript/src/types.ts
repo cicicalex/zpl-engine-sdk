@@ -4,14 +4,35 @@
  */
 
 /**
- * AI Neutrality Index Status - describes the bias level of the analyzed data
+ * `ain_status` — quality of the balance, derived from the `ain` value.
+ *
+ * These are the ONLY valid values. Bands (inclusive lower bound):
+ *   CERTIFIED_NEUTRAL >= 0.96 · HIGHLY_NEUTRAL >= 0.90 · NEUTRAL >= 0.80
+ *   MODERATE_BIAS >= 0.60 · SIGNIFICANT_BIAS >= 0.40 · HIGH_BIAS < 0.40
+ *
+ * Pre-fix this union mixed `ain_status` values with `status` values
+ * (`STABLE`) and invented a `CRITICAL_BIAS` member that no engine ever
+ * returns, while omitting HIGHLY_NEUTRAL / NEUTRAL / SIGNIFICANT_BIAS.
  */
 export type AINStatus =
   | 'CERTIFIED_NEUTRAL'
-  | 'STABLE'
+  | 'HIGHLY_NEUTRAL'
+  | 'NEUTRAL'
   | 'MODERATE_BIAS'
-  | 'HIGH_BIAS'
-  | 'CRITICAL_BIAS';
+  | 'SIGNIFICANT_BIAS'
+  | 'HIGH_BIAS';
+
+/**
+ * `status` — stability regime. A DIFFERENT field from {@link AINStatus}
+ * with a different meaning; the two are never interchangeable.
+ *
+ * Plain `INHIBITED` does not exist — only `INHIBITED_HIGH` / `INHIBITED_LOW`.
+ */
+export type StabilityStatus =
+  | 'STABLE'
+  | 'ACTIVE'
+  | 'INHIBITED_HIGH'
+  | 'INHIBITED_LOW';
 
 /**
  * Bias level classification - derived from AIN value
@@ -40,14 +61,21 @@ export type BinaryMatrix = number[][];
  * caller (see `utils.ts::normalizeEngineComputeResult`).
  */
 export interface ComputeResult {
-  /** AI Neutrality Index: 0-1 score (1 = perfectly neutral) */
+  /**
+   * AI Neutrality Index: float on the 0.0 – 1.0 scale, 6 decimals
+   * (1.0 = perfectly neutral).
+   *
+   * Display as a percentage with `(ain * 100).toFixed(2)`. Never
+   * `Math.round(ain * 100)` — that throws away 4 of the 6 decimals and
+   * destroys the reproducibility guarantee the value exists for.
+   */
   ain: number;
 
-  /** Categorical status of neutrality */
-  status: AINStatus;
+  /** Stability regime (`status` on the wire). Not the AIN band. */
+  status: StabilityStatus;
 
-  /** Engine AIN band label (when present on API) */
-  ainStatus?: string;
+  /** AIN band (`ain_status` on the wire), when present on the API. */
+  ainStatus?: AINStatus;
 
   /** Server-side compute time in ms (when returned by API) */
   computeMs?: number;
@@ -254,14 +282,21 @@ export interface RequestMetadata {
 }
 
 /**
- * Compute request payload
+ * Compute request payload — the exact JSON body `POST /compute` accepts.
+ *
+ * There is NO `matrix` parameter on the wire. `d` IS the matrix dimension;
+ * the SDK's `compute({ matrix, samples })` helper derives `d` and `bias`
+ * from the caller's matrix and posts this shape.
  */
 export interface ComputeRequest {
-  /** Binary matrix (N×N where each element is 0 or 1) */
-  matrix: BinaryMatrix;
+  /** Matrix dimension, integer 3 – 100. Aliases accepted: N, n, dimension. */
+  d: number;
 
-  /** Number of samples for analysis */
-  samples: number;
+  /** Input bias, float 0.0 – 1.0 */
+  bias: number;
+
+  /** Number of samples for analysis (optional) */
+  samples?: number;
 
   /** Optional API key override */
   api_key?: string;

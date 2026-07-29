@@ -4,15 +4,30 @@ from __future__ import annotations
 
 from typing import Any
 
-from zeropointlogic.models import AIStatusType, ComputeResult
+from zeropointlogic.models import AINStatusType, ComputeResult, StabilityStatusType
 
+# `status` — stability regime. Plain "INHIBITED" is not a member.
+# Pre-fix this set held the AIN bands instead, so a real INHIBITED_HIGH /
+# INHIBITED_LOW / ACTIVE from the engine was silently rewritten to
+# "STABLE" — the SDK reported the opposite of what the engine said.
 _VALID_STATUS: frozenset[str] = frozenset(
     {
-        "CERTIFIED_NEUTRAL",
         "STABLE",
+        "ACTIVE",
+        "INHIBITED_HIGH",
+        "INHIBITED_LOW",
+    }
+)
+
+# `ain_status` — AIN band. A different field from `status`.
+_VALID_AIN_STATUS: frozenset[str] = frozenset(
+    {
+        "CERTIFIED_NEUTRAL",
+        "HIGHLY_NEUTRAL",
+        "NEUTRAL",
         "MODERATE_BIAS",
+        "SIGNIFICANT_BIAS",
         "HIGH_BIAS",
-        "CRITICAL_BIAS",
     }
 )
 
@@ -38,12 +53,16 @@ def compute_result_from_engine_dict(
     """Map raw ``/compute`` JSON into :class:`ComputeResult`."""
     status_raw = data.get("status")
     if isinstance(status_raw, str) and status_raw in _VALID_STATUS:
-        status: AIStatusType = status_raw  # type: ignore[assignment]
+        status: StabilityStatusType = status_raw  # type: ignore[assignment]
     else:
         status = "STABLE"
 
     ain_status = data.get("ain_status")
-    ain_status_s = ain_status if isinstance(ain_status, str) else None
+    ain_status_s: AINStatusType | None = (
+        ain_status  # type: ignore[assignment]
+        if isinstance(ain_status, str) and ain_status in _VALID_AIN_STATUS
+        else None
+    )
 
     cm = data.get("compute_ms")
     compute_ms = float(cm) if isinstance(cm, (int, float)) and not isinstance(cm, bool) else None

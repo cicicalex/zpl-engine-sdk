@@ -21,6 +21,8 @@ from zeropointlogic.models import (
     PlanInfo,
     HealthStatus,
     AIStatusType,
+    AINStatusType,
+    StabilityStatusType,
     BiasLevel,
     ain_to_bias_level,
 )
@@ -54,6 +56,8 @@ __all__ = [
     "PlanInfo",
     "HealthStatus",
     "AIStatusType",
+    "AINStatusType",
+    "StabilityStatusType",
     "ZPLError",
     "ZPLAuthError",
     "ZPLRateLimitError",

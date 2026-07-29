@@ -45,7 +45,7 @@ def analyze_currency_pair(pair: str = "EURUSD", days: int = 60) -> dict:
     result = client.compute(matrix=matrix, samples=1000)
 
     print(f"\nStability Results:")
-    print(f"  AIN Score: {result.ain:.3f}")
+    print(f"  AIN Score: {result.ain:.6f}")
     print(f"  Status: {result.status}")
     print(f"  Assessment: {interpret_ain(result.ain, 'long')}")
     print(f"  Probability Output: {result.p_output:.3f}")
@@ -66,7 +66,7 @@ def analyze_currency_pair(pair: str = "EURUSD", days: int = 60) -> dict:
         print(f"  Consider trend-following strategies")
 
     # Detection of manipulation
-    if result.has_bias() and result.status == "CRITICAL_BIAS":
+    if result.has_bias() and result.ain_status == "HIGH_BIAS":
         print(f"\n⛔ WARNING: Potential Market Anomaly")
         print(f"   Extreme bias detected. Possible manipulation or regime change.")
 
@@ -105,7 +105,7 @@ def compare_forex_pairs() -> None:
 
         status_char = "✓" if result.is_stable() else "⚠"
         print(
-            f"{status_char} {pair_name:10} | AIN: {result.ain:.3f} | {result.status:20} | {interpret_ain(result.ain, 'short')}"
+            f"{status_char} {pair_name:10} | AIN: {result.ain:.6f} | {result.status:20} | {interpret_ain(result.ain, 'short')}"
         )
 
     # Summary
@@ -113,13 +113,13 @@ def compare_forex_pairs() -> None:
     stable_count = sum(1 for r in results.values() if r.is_stable())
     print(f"Summary:")
     print(f"  Stable pairs: {stable_count}/{len(pairs)}")
-    print(f"  Average AIN: {sum(r.ain for r in results.values()) / len(results):.3f}")
+    print(f"  Average AIN: {sum(r.ain for r in results.values()) / len(results):.6f}")
 
     # Find best and worst
     best = max(results.items(), key=lambda x: x[1].ain)
     worst = min(results.items(), key=lambda x: x[1].ain)
-    print(f"  Most stable: {best[0]} (AIN: {best[1].ain:.3f})")
-    print(f"  Most volatile: {worst[0]} (AIN: {worst[1].ain:.3f})")
+    print(f"  Most stable: {best[0]} (AIN: {best[1].ain:.6f})")
+    print(f"  Most volatile: {worst[0]} (AIN: {worst[1].ain:.6f})")
 
 
 def detect_market_regimes(prices: list[float], window_days: int = 20) -> None:
@@ -147,7 +147,7 @@ def detect_market_regimes(prices: list[float], window_days: int = 20) -> None:
         regime = "RANGING" if result.is_neutral(threshold=0.65) else "TRENDING"
 
         regimes.append((i, regime, result.ain))
-        print(f"Period {i:3d}-{i+window_days:3d}: {regime:10} (AIN: {result.ain:.3f})")
+        print(f"Period {i:3d}-{i+window_days:3d}: {regime:10} (AIN: {result.ain:.6f})")
 
     print(f"\nRegime Analysis:")
     ranging_count = sum(1 for _, regime, _ in regimes if regime == "RANGING")

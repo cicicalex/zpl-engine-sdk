@@ -24,8 +24,9 @@ const result = await client.compute({
   samples: 1000,
 });
 
-console.log(result.ain);      // 0-1 score
-console.log(result.status);   // 'STABLE', 'HIGH_BIAS', etc
+console.log(result.ain);       // float 0.0-1.0, 6 decimals
+console.log(result.status);    // 'STABLE' | 'ACTIVE' | 'INHIBITED_HIGH' | 'INHIBITED_LOW'
+console.log(result.ainStatus); // AIN band, e.g. 'NEUTRAL'
 console.log(result.isNeutral); // true/false
 ```
 
@@ -124,19 +125,35 @@ plans.plans.forEach((plan) => {
 
 ## Status Values
 
+Two separate fields — never interchangeable.
+
+`ainStatus` (`ain_status`) — AIN band:
+
 | Value | Meaning |
 |-------|---------|
-| `CERTIFIED_NEUTRAL` | AIN 0.95+ |
-| `STABLE` | AIN 0.8-0.95 |
-| `MODERATE_BIAS` | AIN 0.5-0.8 |
-| `HIGH_BIAS` | AIN 0.3-0.5 |
-| `CRITICAL_BIAS` | AIN 0-0.3 |
+| `CERTIFIED_NEUTRAL` | AIN >= 0.96 |
+| `HIGHLY_NEUTRAL` | AIN >= 0.90 |
+| `NEUTRAL` | AIN >= 0.80 |
+| `MODERATE_BIAS` | AIN >= 0.60 |
+| `SIGNIFICANT_BIAS` | AIN >= 0.40 |
+| `HIGH_BIAS` | AIN < 0.40 |
+
+`status` — stability regime:
+
+| Value |
+|-------|
+| `STABLE` |
+| `ACTIVE` |
+| `INHIBITED_HIGH` |
+| `INHIBITED_LOW` |
+
+Plain `INHIBITED` is not a value.
 
 ## Result Fields
 
 ```typescript
 {
-  ain: 0.73,                    // AI Neutrality Index (0-1)
+  ain: 0.732145,                // AI Neutrality Index, float 0.0-1.0 (6 decimals)
   pOutput: 0.48,               // Predicted output probability
   deviation: 0.12,             // Standard deviation
   status: 'STABLE',            // Categorical status

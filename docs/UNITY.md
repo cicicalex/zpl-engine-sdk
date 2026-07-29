@@ -11,7 +11,7 @@ This document is for **Unity engineers** deciding how to integrate ZPL AIN / sta
 ## Typical integration pattern
 
 1. **Secrets:** Keep `ZPL_API_KEY` on a **game server** or backend you control (same as any mobile game with a paid API). Avoid shipping long-lived keys in client builds players can extract.
-2. **Transport:** Server uses `HttpClient` (or `UnityWebRequest` on a headless worker) → `POST /compute` with JSON body (`matrix`, `samples`, etc.).
+2. **Transport:** Server uses `HttpClient` (or `UnityWebRequest` on a headless worker) → `POST /compute` with JSON body (`d`, `bias`, `samples`). There is no `matrix` parameter — `d` **is** the matrix dimension.
 3. **Gameplay:** Clients receive **derived** results only (e.g. `ain`, `ain_status`, `tokens_used` as allowed by your UX). Do not log raw engine internals.
 
 ## When Unity talks to the engine directly (prototypes / tools)

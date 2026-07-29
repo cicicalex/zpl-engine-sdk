@@ -64,7 +64,8 @@ packages/typescript/
 ### 2. Type System
 
 **Core Types:**
-- `AINStatus` - 5 categorical status values
+- `AINStatus` - `ain_status` band, 6 values (CERTIFIED_NEUTRAL … HIGH_BIAS)
+- `StabilityStatus` - `status` regime, 4 values (STABLE, ACTIVE, INHIBITED_HIGH, INHIBITED_LOW)
 - `ComputeResult` - Single computation output
 - `BatchComputeResult` - Multiple computations
 - `Usage` - Token quota tracking

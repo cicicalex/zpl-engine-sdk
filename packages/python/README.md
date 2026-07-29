@@ -127,7 +127,7 @@ client = ZPLClient(api_key="zpl_xxx")
 matrix = [[0, 1, 0], [1, 0, 1], [0, 1, 0]]
 result = client.compute(matrix=matrix, samples=1000)
 
-print(f"AIN Score: {result.ain:.3f}")
+print(f"AIN Score: {result.ain:.6f}")
 print(f"Status: {result.status}")
 print(f"Is neutral? {result.is_neutral()}")
 print(f"Tokens remaining: {result.tokens_remaining}")
@@ -152,7 +152,7 @@ from zeropointlogic import AsyncZPLClient
 async def main():
     async with AsyncZPLClient(api_key="zpl_xxx") as client:
         result = await client.compute(matrix=[[0, 1], [1, 0]], samples=1000)
-        print(f"AIN: {result.ain:.3f}")
+        print(f"AIN: {result.ain:.6f}")
 
 asyncio.run(main())
 ```
@@ -168,7 +168,7 @@ matrix = matrix_from_prices(prices, window=3)
 
 client = ZPLClient(api_key="zpl_xxx")
 result = client.compute(matrix=matrix, samples=500)
-print(f"Price distribution bias: {result.ain:.3f}")
+print(f"Price distribution bias: {result.ain:.6f}")
 ```
 
 ### Batch Processing
@@ -188,7 +188,7 @@ matrices = [
 results = client.batch_compute(matrices, samples=500)
 
 for i, result in enumerate(results):
-    print(f"Matrix {i}: AIN={result.ain:.3f}, Status={result.status}")
+    print(f"Matrix {i}: AIN={result.ain:.6f}, Status={result.status}")
 ```
 
 ### API Usage Monitoring
@@ -223,10 +223,10 @@ print(f"Uptime: {health.uptime_percent:.2f}%")
 result = client.compute(matrix, samples=1000)
 
 # Properties
-result.ain: float                    # AI Neutrality Index (0-1)
-result.p_output: float              # Probability output
-result.deviation: float             # Standard deviation
-result.status: AIStatusType         # CERTIFIED_NEUTRAL | STABLE | MODERATE_BIAS | HIGH_BIAS | CRITICAL_BIAS
+result.ain: float                    # AI Neutrality Index, float 0.0-1.0 (6 decimals)
+result.status: StabilityStatusType   # STABLE | ACTIVE | INHIBITED_HIGH | INHIBITED_LOW
+result.ain_status: AINStatusType     # CERTIFIED_NEUTRAL | HIGHLY_NEUTRAL | NEUTRAL
+                                     #   | MODERATE_BIAS | SIGNIFICANT_BIAS | HIGH_BIAS
 result.tokens_used: int             # Tokens consumed
 result.tokens_remaining: int        # Tokens left
 result.matrix_size: int             # N (for N×N matrix)
@@ -234,8 +234,8 @@ result.samples: int                 # Sample count used
 
 # Methods
 result.is_neutral(threshold=0.7)    # Check if AIN >= threshold
-result.is_stable()                  # Check if status is neutral/stable
-result.has_bias()                   # Check if status contains BIAS
+result.is_stable()                  # Check if status == "STABLE"
+result.has_bias()                   # Check if ain_status is a *_BIAS band
 ```
 
 ### UsageInfo
@@ -436,27 +436,41 @@ python examples/forex_stability.py
 ## API Endpoints
 
 ### POST /compute
-Analyze a binary matrix for AI Neutrality Index.
+Compute the AI Neutrality Index.
+
+There is **no `matrix` parameter** on the wire. `d` **is** the matrix
+dimension (aliases accepted: `N`, `n`, `dimension`); the SDK's
+`compute(matrix=…)` helper derives `d` and `bias` from your matrix and
+sends this body:
 
 **Request:**
 ```json
 {
-  "matrix": [[0, 1, 0], [1, 0, 1], [0, 1, 0]],
+  "d": 9,
+  "bias": 0.5,
   "samples": 1000
 }
 ```
 
+`d`: int 3–100 · `bias`: float 0.0–1.0 · `samples`: int, optional.
+
 **Response:**
 ```json
 {
-  "ain": 0.73,
-  "p_output": 0.51,
-  "deviation": 0.12,
+  "d": 9,
+  "bias": 0.5,
+  "p_output": 0.500000,
+  "ain": 0.732145,
+  "ain_status": "NEUTRAL",
+  "deviation": 0.012000,
   "status": "STABLE",
-  "tokens_used": 1,
-  "tokens_remaining": 9999
+  "samples": 1000,
+  "tokens_used": 1
 }
 ```
+
+`ain` is a float on the 0.0–1.0 scale with 6 decimals. Show it as a
+percentage with `f"{ain * 100:.2f}"`; never `round(ain * 100)`.
 
 ### GET /usage
 Get current API usage for authenticated key.

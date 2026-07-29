@@ -3,7 +3,13 @@
  * @module utils
  */
 
-import type { BinaryMatrix, BiasLevel, AINStatus, ComputeResult } from './types.js';
+import type {
+  BinaryMatrix,
+  BiasLevel,
+  AINStatus,
+  StabilityStatus,
+  ComputeResult,
+} from './types.js';
 import { ZPLValidationError } from './errors.js';
 
 /**
@@ -182,22 +188,24 @@ export function ainToBiasLevel(ain: number): BiasLevel {
 }
 
 /**
- * Convert AIN status to human-readable description
- * @param status - API status value
+ * Convert an `ain_status` band to a human-readable description
+ * @param status - AIN band value (`ain_status`), not the stability `status`
  * @returns Detailed interpretation string
  */
 export function interpretStatus(status: AINStatus): string {
   const interpretations: Record<AINStatus, string> = {
     CERTIFIED_NEUTRAL:
       'Data demonstrates certified neutral properties. Highly reliable for unbiased analysis.',
-    STABLE:
-      'Stable neutrality detected. Suitable for most analytical purposes.',
+    HIGHLY_NEUTRAL:
+      'Highly neutral. Suitable for most analytical purposes.',
+    NEUTRAL:
+      'Neutral. Bias is within the normal band for analytical use.',
     MODERATE_BIAS:
       'Moderate bias detected. Use with caution in decision-making. Recommend further analysis.',
+    SIGNIFICANT_BIAS:
+      'Significant bias detected. Not recommended for critical decisions without mitigation strategies.',
     HIGH_BIAS:
-      'High bias detected. Not recommended for critical decisions without mitigation strategies.',
-    CRITICAL_BIAS:
-      'Critical bias detected. Data is unsuitable for unbiased analysis. Immediate review required.',
+      'High bias detected. Data is unsuitable for unbiased analysis. Immediate review required.',
   };
 
   return interpretations[status];
@@ -307,12 +315,27 @@ export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/**
+ * `status` — stability regime. Plain `INHIBITED` is not a member.
+ * Pre-fix this list mixed the two enums, so a real `INHIBITED_HIGH` /
+ * `INHIBITED_LOW` / `ACTIVE` from the engine was silently rewritten to
+ * `STABLE` — the SDK reported the opposite of what the engine said.
+ */
+const STABILITY_STATUSES: readonly StabilityStatus[] = [
+  'STABLE',
+  'ACTIVE',
+  'INHIBITED_HIGH',
+  'INHIBITED_LOW',
+];
+
+/** `ain_status` — AIN band. A different field from `status`. */
 const AIN_STATUSES: readonly AINStatus[] = [
   'CERTIFIED_NEUTRAL',
-  'STABLE',
+  'HIGHLY_NEUTRAL',
+  'NEUTRAL',
   'MODERATE_BIAS',
+  'SIGNIFICANT_BIAS',
   'HIGH_BIAS',
-  'CRITICAL_BIAS',
 ];
 
 function pickNumber(raw: Record<string, unknown>, keys: string[], fallback: number): number {
@@ -331,9 +354,14 @@ function pickString(raw: Record<string, unknown>, keys: string[]): string | unde
   return undefined;
 }
 
-function coerceStatus(s: string | undefined): AINStatus {
-  if (s && (AIN_STATUSES as readonly string[]).includes(s)) return s as AINStatus;
+function coerceStatus(s: string | undefined): StabilityStatus {
+  if (s && (STABILITY_STATUSES as readonly string[]).includes(s)) return s as StabilityStatus;
   return 'STABLE';
+}
+
+function coerceAinStatus(s: string | undefined): AINStatus | undefined {
+  if (s && (AIN_STATUSES as readonly string[]).includes(s)) return s as AINStatus;
+  return undefined;
 }
 
 /**
@@ -351,7 +379,7 @@ function coerceStatus(s: string | undefined): AINStatus {
 export function normalizeEngineComputeResult(raw: Record<string, unknown>): Omit<ComputeResult, 'isNeutral' | 'biasLevel'> {
   const ain = pickNumber(raw, ['ain'], 0);
   const status = coerceStatus(pickString(raw, ['status']));
-  const ainStatus = pickString(raw, ['ain_status', 'ainStatus']);
+  const ainStatus = coerceAinStatus(pickString(raw, ['ain_status', 'ainStatus']));
   const computeMsRaw = pickNumber(raw, ['compute_ms', 'computeMs'], NaN);
   const tokensUsed = Math.round(pickNumber(raw, ['tokens_used', 'tokensUsed'], 0));
   // tokens_remaining: only set when engine actually included it. We

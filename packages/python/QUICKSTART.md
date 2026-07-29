@@ -35,7 +35,7 @@ matrix = [
 result = client.compute(matrix=matrix, samples=1000)
 
 # Display results
-print(f"AIN Score: {result.ain:.3f}")
+print(f"AIN Score: {result.ain:.6f}")
 print(f"Status: {result.status}")
 print(f"Neutral? {result.is_neutral()}")
 print(f"Tokens remaining: {result.tokens_remaining}")
@@ -43,7 +43,7 @@ print(f"Tokens remaining: {result.tokens_remaining}")
 
 Expected output:
 ```
-AIN Score: 0.735
+AIN Score: 0.735214
 Status: STABLE
 Neutral? True
 Tokens remaining: 99
@@ -59,7 +59,7 @@ prices = [100, 105, 102, 110, 108, 115, 112]
 matrix = matrix_from_prices(prices, window=3)
 
 result = client.compute(matrix=matrix, samples=500)
-print(f"Price distribution bias: {result.ain:.3f}")
+print(f"Price distribution bias: {result.ain:.6f}")
 ```
 
 ### From Time Series
@@ -139,7 +139,7 @@ async def main():
             matrix=[[0, 1], [1, 0]],
             samples=1000
         )
-        print(f"AIN: {result.ain:.3f}")
+        print(f"AIN: {result.ain:.6f}")
 
 asyncio.run(main())
 ```
@@ -157,7 +157,7 @@ prices = [45000, 45500, 44800, 46200, 45900, 47100]
 matrix = matrix_from_prices(prices, window=3)
 
 result = client.compute(matrix=matrix, samples=1000)
-print(f"BTC bias: {result.ain:.3f} - {result.status}")
+print(f"BTC bias: {result.ain:.6f} - {result.status}")
 ```
 
 ### Game Economy
@@ -173,7 +173,7 @@ matrix = [[1 if item >= median else 0 for item in items[:5]]]
 matrix += [[1 if item >= median else 0 for item in items[5:]]]
 
 result = client.compute(matrix=matrix, samples=500)
-print(f"Item balance: {result.ain:.3f}")
+print(f"Item balance: {result.ain:.6f}")
 if result.is_neutral(threshold=0.65):
     print("✓ Balanced economy")
 else:
@@ -186,19 +186,33 @@ Current limits and prices are defined on the engine; see **[zeropointlogic.io/pr
 
 ## Status Values
 
-- `CERTIFIED_NEUTRAL` — Perfect distribution (ain >= 0.85)
-- `STABLE` — High neutrality (ain >= 0.70)
-- `MODERATE_BIAS` — Some bias detected (ain >= 0.55)
-- `HIGH_BIAS` — Significant bias (ain >= 0.40)
-- `CRITICAL_BIAS` — Extreme bias (ain < 0.25)
+Two separate fields with different meanings — never interchangeable.
+
+`result.ain_status` — AIN band:
+
+- `CERTIFIED_NEUTRAL` — ain >= 0.96
+- `HIGHLY_NEUTRAL` — ain >= 0.90
+- `NEUTRAL` — ain >= 0.80
+- `MODERATE_BIAS` — ain >= 0.60
+- `SIGNIFICANT_BIAS` — ain >= 0.40
+- `HIGH_BIAS` — ain < 0.40
+
+`result.status` — stability regime:
+
+- `STABLE`
+- `ACTIVE`
+- `INHIBITED_HIGH`
+- `INHIBITED_LOW`
+
+Plain `INHIBITED` is not a value.
 
 ## Useful Methods
 
 ```python
 # ComputeResult
 result.is_neutral(threshold=0.7)  # Check if AIN >= threshold
-result.is_stable()                 # Check if status is neutral/stable
-result.has_bias()                  # Check if status contains BIAS
+result.is_stable()                 # Check if status == "STABLE"
+result.has_bias()                  # Check if ain_status is a *_BIAS band
 
 # UsageInfo
 usage.usage_percent                # Get usage as percentage (0-100)

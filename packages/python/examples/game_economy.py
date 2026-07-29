@@ -60,7 +60,7 @@ def analyze_item_distribution(items: list[int], thresholds: tuple = (20, 50)) ->
     result = client.compute(matrix=matrix, samples=500)
 
     print(f"\nBalance Analysis:")
-    print(f"  AIN Score: {result.ain:.3f}")
+    print(f"  AIN Score: {result.ain:.6f}")
     print(f"  Status: {result.status}")
     print(f"  Assessment: {interpret_ain(result.ain, 'medium')}")
 
@@ -115,7 +115,7 @@ def analyze_drop_rates(drops_per_session: list[int], session_count: int = 100) -
     result = client.compute(matrix=matrix, samples=500)
 
     print(f"\nConsistency Analysis:")
-    print(f"  AIN Score: {result.ain:.3f}")
+    print(f"  AIN Score: {result.ain:.6f}")
     print(f"  Status: {result.status}")
 
     if result.is_neutral(threshold=0.7):
@@ -161,17 +161,17 @@ def compare_patch_balance(before_items: list[int], after_items: list[int]) -> No
     after_result = client.compute(matrix=after_matrix, samples=500)
 
     print(f"Before Patch:")
-    print(f"  AIN Score: {before_result.ain:.3f}")
+    print(f"  AIN Score: {before_result.ain:.6f}")
     print(f"  Status: {before_result.status}")
 
     print(f"\nAfter Patch:")
-    print(f"  AIN Score: {after_result.ain:.3f}")
+    print(f"  AIN Score: {after_result.ain:.6f}")
     print(f"  Status: {after_result.status}")
 
     # Impact assessment
     ain_change = after_result.ain - before_result.ain
     print(f"\nPatch Impact:")
-    print(f"  AIN Change: {ain_change:+.3f}")
+    print(f"  AIN Change: {ain_change:+.6f}")
 
     if ain_change > 0.05:
         print(f"  ✓ IMPROVED balance (more neutral)")
