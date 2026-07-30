@@ -98,6 +98,21 @@ class ComputeResult:
     ain: float
     status: StabilityStatusType
     tokens_used: int
+    p_output: float | None = None
+    """The engine's own measurement: output balance, 0.500 being equilibrium.
+
+    ``ain`` is derived from this through an absolute value and so cannot say
+    which side of equilibrium a reading sits on — 0.4687 and 0.5313 both give
+    AIN 0.9373. Read ``p_output`` when the direction of the imbalance matters,
+    and compare it against 0.5 rather than against 1.
+
+    ``None`` when the engine did not report it, never 0.0: a balance of zero
+    would mean the output stream was entirely zeros, a real and very different
+    claim from "not reported".
+    """
+
+    deviation: float | None = None
+    """Distance from equilibrium as the engine reports it, when present."""
     tokens_remaining: int | None = None
     matrix_size: int | None = None
     samples: int | None = None

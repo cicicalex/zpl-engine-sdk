@@ -368,10 +368,27 @@ function coerceAinStatus(s: string | undefined): AINStatus | undefined {
  * Map raw JSON from POST /compute (snake_case engine fields) into {@link ComputeResult}
  * without derived fields `isNeutral` / `biasLevel` (client adds those).
  *
- * AUDIT 2026-05-13 (B2 + D4): `p_output` and `deviation` are read from
- * the wire response but NOT placed into the public ComputeResult — they
- * are trade-secret intermediates per the "Live Engine Only" / IP rules
- * (the MCP hides them; the SDK now matches). `tokens_remaining` is only
+ * AUDIT 2026-05-13 (B2 + D4): `p_output` and `deviation` were read from the
+ * wire response but NOT placed into the public ComputeResult, treated as
+ * trade-secret intermediates because the MCP hid them.
+ *
+ * AUDIT 2026-07-30: reversed, after checking what the wire actually carries.
+ * The engine's own HTTP response serialises p_output and deviation to every
+ * caller holding a key, so both have been public since the API shipped.
+ * Withholding them here hid them from the one audience reading through the
+ * SDK, while anyone calling the endpoint directly had them all along. The
+ * owner's position, asked directly: the calculation stays secret, the numbers
+ * it produces do not — a single output coefficient reveals no method.
+ *
+ * It matters beyond visibility. `p_output` is the engine's actual measurement,
+ * output balance with 0.500 as equilibrium; `ain` is derived from it through
+ * an absolute value and therefore cannot say which side of equilibrium a
+ * reading sits on. p_output 0.4687 and 0.5313 both come back as AIN 0.9373.
+ * For a method whose purpose is finding a stable centre, which way it leans is
+ * half the answer, and the SDK was discarding that half.
+ *
+ * Both stay optional: absent means the engine did not send them, which is not
+ * the same as a balance of zero. `tokens_remaining` is only
  * included when the engine actually returns it; absent means "n/a" and
  * the field stays `undefined` so consumers don't render misleading
  * "tokens=0 left" scare messages on a healthy account.
@@ -398,6 +415,14 @@ export function normalizeEngineComputeResult(raw: Record<string, unknown>): Omit
   if (tokensRemainingValue !== undefined) out.tokensRemaining = tokensRemainingValue;
   if (ainStatus !== undefined) out.ainStatus = ainStatus;
   if (Number.isFinite(computeMsRaw)) out.computeMs = computeMsRaw;
+
+  // Only when the engine actually sent them. A missing measurement must not
+  // arrive as 0, which would claim the output stream was entirely zeros — a
+  // real reading, and a badly wrong one.
+  const pOutputRaw = pickNumber(raw, ['p_output', 'pOutput'], NaN);
+  if (Number.isFinite(pOutputRaw)) out.pOutput = pOutputRaw;
+  const deviationRaw = pickNumber(raw, ['deviation'], NaN);
+  if (Number.isFinite(deviationRaw)) out.deviation = deviationRaw;
   return out;
 }
 

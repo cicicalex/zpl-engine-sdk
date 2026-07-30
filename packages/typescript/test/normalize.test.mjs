@@ -4,17 +4,23 @@ import { normalizeEngineComputeResult, redactSecretsInText } from '../dist/utils
 
 // AUDIT 2026-05-13 (B2 + D4):
 //   - pOutput + deviation removed from the public ComputeResult shape
-//     to plug an IP leak (engine internals must not appear in the SDK
-//     types). They still arrive in the wire response, the normaliser
-//     just drops them.
+//     to plug what was believed to be an IP leak.
+//
+// AUDIT 2026-07-30: reversed. The engine's own HTTP response serialises
+// both to every caller holding a key, so neither was ever secret — they
+// were hidden only from people reading through a client. The owner's
+// position, asked directly: the calculation stays secret, the numbers it
+// produces do not. The assertions below pinned the old decision and are
+// updated rather than deleted, so the reversal shows in the history
+// instead of looking like drift.
 //   - tokensRemaining is now Optional — only set when the engine
 //     actually returns it. Absent → undefined (caller renders "n/a"),
 //     never the misleading "0 left" scare message.
 test('normalizeEngineComputeResult maps snake_case engine JSON', () => {
   const r = normalizeEngineComputeResult({
     ain: 0.82,
-    p_output: 0.51,    // still in wire response, dropped by normaliser
-    deviation: 0.02,   // same
+    p_output: 0.51,
+    deviation: 0.02,
     status: 'STABLE',
     ain_status: 'NEUTRAL',
     samples: 1000,
@@ -28,9 +34,12 @@ test('normalizeEngineComputeResult maps snake_case engine JSON', () => {
   // tokens_remaining absent from input → undefined on result.
   assert.equal(r.tokensRemaining, undefined);
   assert.equal(r.computeMs, 14.5);
-  // IP leak guards: pOutput + deviation must NOT be on the result.
-  assert.equal(r.pOutput, undefined);
-  assert.equal(r.deviation, undefined);
+  // These reach the caller now. pOutput is the engine's measurement — output
+  // balance, 0.500 being equilibrium — and ain is derived from it through an
+  // absolute value, so it cannot express which side of equilibrium a reading
+  // sits on.
+  assert.equal(r.pOutput, 0.51);
+  assert.equal(r.deviation, 0.02);
 });
 
 test('normalizeEngineComputeResult forwards tokensRemaining when engine returns it', () => {

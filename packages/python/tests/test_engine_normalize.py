@@ -1,9 +1,14 @@
 """Tests for engine JSON normalization.
 
 AUDIT 2026-05-13 (D3 + D4): p_output / deviation removed from public
-ComputeResult to plug IP leak; tokens_remaining is now Optional. Test
-updated to match the new public shape — wire response still carries
-p_output / deviation, the normaliser just drops them.
+ComputeResult to plug what was believed to be an IP leak.
+
+AUDIT 2026-07-30: reversed. The engine's own HTTP response serialises both to
+every caller holding a key, so neither was ever secret — they were hidden only
+from people reading through a client. The owner's position, asked directly: the
+calculation stays secret, the numbers it produces do not. The assertions below
+were pinning the old decision and are updated rather than deleted, so the
+reversal is visible in the history instead of looking like drift.
 """
 
 from zeropointlogic.engine_normalize import compute_result_from_engine_dict
@@ -13,8 +18,8 @@ def test_compute_result_from_engine_dict_snake_case():
     r = compute_result_from_engine_dict(
         {
             "ain": 0.81,
-            "p_output": 0.52,   # ← still in wire response, dropped by normaliser
-            "deviation": 0.01,  # ← same
+            "p_output": 0.52,
+            "deviation": 0.01,
             "status": "STABLE",
             "ain_status": "NEUTRAL",
             "tokens_used": 3,
@@ -32,9 +37,12 @@ def test_compute_result_from_engine_dict_snake_case():
     assert r.compute_ms == 12.0
     assert r.matrix_size == 4
     assert r.samples == 500
-    # IP leak fields must NOT be on the public dataclass anymore.
-    assert not hasattr(r, "p_output")
-    assert not hasattr(r, "deviation")
+    # These reach the caller now. p_output is the engine's measurement —
+    # output balance, 0.500 being equilibrium — and ain is derived from it
+    # through an absolute value, so it cannot express which side of
+    # equilibrium a reading sits on.
+    assert r.p_output == 0.52
+    assert r.deviation == 0.01
 
 
 def test_compute_result_from_engine_dict_with_tokens_remaining():

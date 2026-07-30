@@ -67,10 +67,33 @@ def compute_result_from_engine_dict(
     cm = data.get("compute_ms")
     compute_ms = float(cm) if isinstance(cm, (int, float)) and not isinstance(cm, bool) else None
 
-    # AUDIT 2026-05-13 (D3 + D4): p_output / deviation removed from
-    # ComputeResult to plug an IP leak. tokens_remaining is now
-    # Optional and only populated when the engine actually returned a
-    # value (None means "ask /usage").
+    # AUDIT 2026-05-13 (D3 + D4): p_output / deviation were removed from
+    # ComputeResult to plug what was believed to be an IP leak.
+    #
+    # AUDIT 2026-07-30: restored, after checking what the wire carries. The
+    # engine's own HTTP response serialises both to every caller holding a
+    # key, so neither was ever secret — the only people they were hidden from
+    # were those reading through a client. The owner's position, asked
+    # directly: the calculation stays secret, the numbers it produces do not.
+    #
+    # p_output is the measurement; ain is derived from it through an absolute
+    # value and therefore cannot say which side of equilibrium a reading sits
+    # on. 0.4687 and 0.5313 both give AIN 0.9373.
+    #
+    # None when absent, never 0.0: a p_output of zero would mean the output
+    # stream was entirely zeros, which is a real and very different claim from
+    # "the engine did not report it".
+    p_out = data.get("p_output", data.get("pOutput"))
+    p_output_val = (
+        float(p_out) if isinstance(p_out, (int, float)) and not isinstance(p_out, bool) else None
+    )
+    dev = data.get("deviation")
+    deviation_val = (
+        float(dev) if isinstance(dev, (int, float)) and not isinstance(dev, bool) else None
+    )
+
+    # tokens_remaining is Optional and only populated when the engine actually
+    # returned a value (None means "ask /usage").
     tokens_remaining_present = "tokens_remaining" in data or "tokensRemaining" in data
     tokens_remaining_val: int | None = (
         _int_num(data, "tokens_remaining", "tokensRemaining", default=0)
@@ -83,6 +106,8 @@ def compute_result_from_engine_dict(
         status=status,
         tokens_used=_int_num(data, "tokens_used", "tokensUsed", default=0),
         tokens_remaining=tokens_remaining_val,
+        p_output=p_output_val,
+        deviation=deviation_val,
         matrix_size=matrix_size,
         samples=samples,
         ain_status=ain_status_s,

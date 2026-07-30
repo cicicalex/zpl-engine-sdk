@@ -47,18 +47,20 @@ export type BinaryMatrix = number[][];
 /**
  * Main result from ZPL Engine compute endpoint.
  *
- * AUDIT 2026-05-13 (BUG B2 — IP LEAK): pre-fix this interface
- * exposed `pOutput: number` and `deviation: number` as public,
- * documented fields. The MCP server intentionally hides those
- * (see `mcp/src/index.ts` "IP protection: expose AIN score +
- * status only"). The SDK contradicting that policy meant the
- * internal probability + deviation scalars shipped in every
- * `dist/types.d.ts` and were available to anyone running
- * `tsc` against the public types. Per the "Live Engine Only"
- * rule + the trade-secret strategy, both fields are removed
- * from the public surface. They're still in the wire response
- * but the SDK normaliser drops them before returning to the
- * caller (see `utils.ts::normalizeEngineComputeResult`).
+ * AUDIT 2026-05-13 (BUG B2): `pOutput` and `deviation` were removed from this
+ * interface as trade-secret intermediates, to match the MCP, which hid them
+ * under an "IP protection" note.
+ *
+ * AUDIT 2026-07-30: restored, both here and in the MCP, after checking what
+ * the wire actually carries. The engine's HTTP response serialises p_output
+ * and deviation to every caller holding a key, so neither was ever secret —
+ * the only people they were hidden from were those reading through a client.
+ * The owner's position, asked directly: the calculation stays secret, the
+ * numbers it produces do not.
+ *
+ * They are optional because the engine may not send them, and absent is not
+ * the same as zero: a pOutput of 0 would mean the output stream was entirely
+ * zeros, which is a real and very different reading from "not reported".
  */
 export interface ComputeResult {
   /**
@@ -70,6 +72,20 @@ export interface ComputeResult {
    * destroys the reproducibility guarantee the value exists for.
    */
   ain: number;
+
+  /**
+   * The engine's own measurement: the balance of the output stream, where
+   * 0.500 is equilibrium. Present whenever the engine sends it.
+   *
+   * `ain` is derived from this through an absolute value and so cannot say
+   * which side of equilibrium a reading sits on — 0.4687 and 0.5313 both give
+   * AIN 0.9373. Read `pOutput` when the direction of the imbalance matters,
+   * and compare it against 0.5 rather than against 1.
+   */
+  pOutput?: number;
+
+  /** Distance from equilibrium as the engine reports it, when present. */
+  deviation?: number;
 
   /** Stability regime (`status` on the wire). Not the AIN band. */
   status: StabilityStatus;
