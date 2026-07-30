@@ -1,7 +1,7 @@
 """Data models for ZPL Engine SDK."""
 
 from dataclasses import dataclass
-from typing import Literal
+from typing import Literal, Optional
 from datetime import datetime
 
 
@@ -157,6 +157,64 @@ class ComputeResult:
         # 6 decimals: `ain` is delivered on the 0.0-1.0 scale with 6
         # decimals and the default repr must not silently truncate it.
         return f"ComputeResult(ain={self.ain:.6f}, status={self.status}, used={self.tokens_used}, {rem})"
+
+
+@dataclass
+class FamilyVerdict:
+    """One operator family's verdict on a supplied matrix."""
+
+    family: int
+    """Index into the engine's fixed family list."""
+
+    bit: int
+    """The family's output bit for this matrix: 0 or 1."""
+
+    tie_broken: bool
+    """
+    The fold reached an exact tie and the centre decided it.
+
+    A tie means no majority was found at all — a weaker result than a
+    confident bit, and anything presenting a verdict should say so rather
+    than hide the difference.
+    """
+
+    def __repr__(self) -> str:
+        tie = ", tie-broken" if self.tie_broken else ""
+        return f"FamilyVerdict(family={self.family}, bit={self.bit}{tie})"
+
+
+@dataclass
+class AnalyzeResult:
+    """What the method determines about one specific matrix.
+
+    Deliberately carries no ``ain`` and no ``p_output``. Both describe how
+    output bits distribute across many sampled matrices; over a single matrix
+    the proportion is 0 or 1 and says nothing about balance. A score here would
+    be an invented number wearing the clothes of a measurement.
+    """
+
+    n: int
+    """Dimension of the matrix that was analysed."""
+
+    families: list["FamilyVerdict"]
+    """Every family's verdict, in engine order."""
+
+    ones: int
+    """How many families returned 1."""
+
+    unanimous: bool
+    """
+    All families agreed. Unanimity is a stronger result than a three-to-one
+    split, and the engine's pooled reading could not express the difference.
+    """
+
+    tokens_used: int = 0
+    compute_ms: Optional[float] = None
+
+    def __repr__(self) -> str:
+        bits = "".join(str(f.bit) for f in self.families)
+        agree = "unanimous" if self.unanimous else f"{self.ones}/{len(self.families)} say 1"
+        return f"AnalyzeResult(n={self.n}, bits={bits}, {agree})"
 
 
 @dataclass

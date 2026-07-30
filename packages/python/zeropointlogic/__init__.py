@@ -17,6 +17,8 @@ Client = ZPLClient
 AsyncClient = AsyncZPLClient
 from zeropointlogic.models import (
     ComputeResult,
+    AnalyzeResult,
+    FamilyVerdict,
     UsageInfo,
     PlanInfo,
     HealthStatus,
@@ -52,6 +54,8 @@ __all__ = [
     "ZPLClient",
     "AsyncZPLClient",
     "ComputeResult",
+    "AnalyzeResult",
+    "FamilyVerdict",
     "UsageInfo",
     "PlanInfo",
     "HealthStatus",

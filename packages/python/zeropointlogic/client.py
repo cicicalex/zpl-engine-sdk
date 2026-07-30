@@ -7,8 +7,12 @@ from typing import Optional
 from datetime import datetime
 
 from zeropointlogic.version import __version__
-from zeropointlogic.models import ComputeResult, UsageInfo, PlanInfo, HealthStatus
-from zeropointlogic.engine_normalize import compute_result_from_engine_dict
+from zeropointlogic.models import (
+    ComputeResult, UsageInfo, PlanInfo, HealthStatus, AnalyzeResult, FamilyVerdict,
+)
+from zeropointlogic.engine_normalize import (
+    compute_result_from_engine_dict, analyze_result_from_engine_dict,
+)
 from zeropointlogic.http_errors import parse_engine_http_error
 from zeropointlogic.exceptions import (
     ZPLError,
@@ -460,6 +464,43 @@ class ZPLClient(BaseZPLClient):
             samples=samples,
         )
 
+    def analyze(self, matrix: list[list[int]]) -> "AnalyzeResult":
+        """Analyse a specific matrix — the engine sees your data.
+
+        ``compute()`` does not transmit the matrix. It reduces it to a
+        dimension and a density of ones, sends those two numbers, and the
+        engine generates fresh random matrices at that density and reports on
+        those. Two entirely different inputs of equal density therefore get the
+        same answer, and nothing in that response indicates the caller's data
+        was never examined.
+
+        This method posts the matrix itself. The engine runs the fold over it
+        and reports what each operator family concluded, whether any needed the
+        centre to break a tie, and how far the four agree.
+
+        There is no AIN here, on purpose: one matrix is one observation, so a
+        proportion over it is 0 or 1 and would say nothing about balance.
+
+        Args:
+            matrix: Binary matrix (N×N, cells 0 or 1, 3 <= N <= 100)
+
+        Returns:
+            AnalyzeResult with every family's verdict and their agreement
+
+        Raises:
+            ZPLValidationError: If the matrix is invalid
+            ZPLAuthError: If the API key is invalid
+            ZPLQuotaError: If quota is exceeded
+            ZPLNetworkError: On connection errors
+        """
+        # Validated locally so a malformed matrix costs nothing: the engine
+        # would refuse it anyway, and spending a round trip to learn that
+        # helps no one.
+        self._validate_matrix(matrix)
+
+        response = self._make_request("POST", "/analyze", {"matrix": matrix})
+        return analyze_result_from_engine_dict(response)
+
     def batch_compute(
         self,
         matrices: list[list[list[int]]],
@@ -719,6 +760,43 @@ class AsyncZPLClient(BaseZPLClient):
             matrix_size=d,
             samples=samples,
         )
+
+    async def analyze(self, matrix: list[list[int]]) -> "AnalyzeResult":
+        """Analyse a specific matrix (async) — the engine sees your data.
+
+        ``compute()`` does not transmit the matrix. It reduces it to a
+        dimension and a density of ones, sends those two numbers, and the
+        engine generates fresh random matrices at that density and reports on
+        those. Two entirely different inputs of equal density therefore get the
+        same answer, and nothing in that response indicates the caller's data
+        was never examined.
+
+        This method posts the matrix itself. The engine runs the fold over it
+        and reports what each operator family concluded, whether any needed the
+        centre to break a tie, and how far the four agree.
+
+        There is no AIN here, on purpose: one matrix is one observation, so a
+        proportion over it is 0 or 1 and would say nothing about balance.
+
+        Args:
+            matrix: Binary matrix (N×N, cells 0 or 1, 3 <= N <= 100)
+
+        Returns:
+            AnalyzeResult with every family's verdict and their agreement
+
+        Raises:
+            ZPLValidationError: If the matrix is invalid
+            ZPLAuthError: If the API key is invalid
+            ZPLQuotaError: If quota is exceeded
+            ZPLNetworkError: On connection errors
+        """
+        # Validated locally so a malformed matrix costs nothing: the engine
+        # would refuse it anyway, and spending a round trip to learn that
+        # helps no one.
+        self._validate_matrix(matrix)
+
+        response = await self._make_request("POST", "/analyze", {"matrix": matrix})
+        return analyze_result_from_engine_dict(response)
 
     async def batch_compute(
         self,

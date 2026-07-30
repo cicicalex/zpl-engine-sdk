@@ -88,3 +88,35 @@ def compute_result_from_engine_dict(
         ain_status=ain_status_s,
         compute_ms=compute_ms,
     )
+
+
+def analyze_result_from_engine_dict(payload: dict) -> "AnalyzeResult":
+    """Build an AnalyzeResult from the engine's /analyze response.
+
+    Kept beside the compute normaliser so both wire shapes are translated in
+    one place. Unlike compute, nothing is dropped here: the analyze response
+    carries no probability and no deviation to withhold — one matrix is one
+    observation, so there is no distribution to summarise.
+
+    Tolerant of a missing `families` list rather than raising: an empty result
+    is visibly empty to the caller, whereas a KeyError deep in the SDK would
+    surface as an unrelated crash.
+    """
+    from zeropointlogic.models import AnalyzeResult, FamilyVerdict
+
+    families = [
+        FamilyVerdict(
+            family=int(f.get("family", i)),
+            bit=1 if f.get("bit") == 1 else 0,
+            tie_broken=bool(f.get("tie_broken", False)),
+        )
+        for i, f in enumerate(payload.get("families") or [])
+    ]
+    return AnalyzeResult(
+        n=int(payload.get("n", 0)),
+        families=families,
+        ones=int(payload.get("ones", sum(f.bit for f in families))),
+        unanimous=bool(payload.get("unanimous", False)),
+        tokens_used=int(payload.get("tokens_used", 0)),
+        compute_ms=payload.get("compute_ms"),
+    )
