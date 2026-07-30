@@ -170,7 +170,7 @@ Run AIN computation on a single matrix.
 
 ```typescript
 const result = await client.compute({
-  matrix: [[0, 1], [1, 0]],
+  matrix: [[0, 1, 0], [1, 0, 1], [0, 1, 0]],
   samples: 1000,                        // Optional (default: 1000)
   timeout: 30000,                       // Optional
 });

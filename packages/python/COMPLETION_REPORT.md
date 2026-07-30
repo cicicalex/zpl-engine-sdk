@@ -212,7 +212,7 @@ from zeropointlogic import AsyncZPLClient
 
 async def main():
     async with AsyncZPLClient(api_key="zpl_u_xxx") as client:
-        result = await client.compute(matrix=[[0,1],[1,0]], samples=500)
+        result = await client.compute(matrix=[[0,1,0],[1,0,1],[0,1,0]], samples=500)
         print(result.ain)
 
 asyncio.run(main())

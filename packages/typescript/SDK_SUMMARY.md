@@ -330,7 +330,7 @@ const client = new ZPLClient({
 });
 
 const result = await client.compute({
-  matrix: [[0,1],[1,0]],
+  matrix: [[0,1,0],[1,0,1],[0,1,0]],
   samples: 1000,
 });
 

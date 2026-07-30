@@ -118,7 +118,7 @@ from zeropointlogic import ZPLClient, ZPLAuthError, ZPLQuotaError
 client = ZPLClient(api_key="zpl_u_xxx")
 
 try:
-    result = client.compute(matrix=[[0, 1], [1, 0]], samples=1000)
+    result = client.compute(matrix=[[0, 1, 0], [1, 0, 1], [0, 1, 0]], samples=1000)
 except ZPLAuthError:
     print("Invalid API key")
 except ZPLQuotaError as e:
@@ -136,7 +136,7 @@ from zeropointlogic import AsyncZPLClient
 async def main():
     async with AsyncZPLClient(api_key="zpl_u_xxx") as client:
         result = await client.compute(
-            matrix=[[0, 1], [1, 0]],
+            matrix=[[0, 1, 0], [1, 0, 1], [0, 1, 0]],
             samples=1000
         )
         print(f"AIN: {result.ain:.6f}")

@@ -139,7 +139,7 @@ print(f"Tokens remaining: {result.tokens_remaining}")
 from zeropointlogic import ZPLClient
 
 with ZPLClient(api_key="zpl_xxx") as client:
-    result = client.compute(matrix=[[0, 1], [1, 0]], samples=500)
+    result = client.compute(matrix=[[0, 1, 0], [1, 0, 1], [0, 1, 0]], samples=500)
     print(f"Result: {result}")
 ```
 
@@ -151,7 +151,7 @@ from zeropointlogic import AsyncZPLClient
 
 async def main():
     async with AsyncZPLClient(api_key="zpl_xxx") as client:
-        result = await client.compute(matrix=[[0, 1], [1, 0]], samples=1000)
+        result = await client.compute(matrix=[[0, 1, 0], [1, 0, 1], [0, 1, 0]], samples=1000)
         print(f"AIN: {result.ain:.6f}")
 
 asyncio.run(main())
@@ -180,9 +180,9 @@ client = ZPLClient(api_key="zpl_xxx")
 
 # Process multiple matrices
 matrices = [
-    [[0, 1], [1, 0]],
-    [[1, 1], [0, 0]],
-    [[0, 0], [1, 1]],
+    [[0, 1, 0], [1, 0, 1], [0, 1, 0]],
+    [[1, 1, 0], [0, 0, 1], [1, 0, 1]],
+    [[0, 0, 1], [1, 1, 0], [0, 1, 1]],
 ]
 
 results = client.batch_compute(matrices, samples=500)
@@ -336,7 +336,7 @@ color = get_status_color("STABLE")        # "green"
 from zeropointlogic import validate_matrix, chunk_matrices
 
 # Validate matrix format
-is_valid, error_msg = validate_matrix([[0, 1], [1, 0]])
+is_valid, error_msg = validate_matrix([[0, 1, 0], [1, 0, 1], [0, 1, 0]])
 if is_valid:
     print("Matrix is valid")
 else:
@@ -365,7 +365,7 @@ from zeropointlogic import (
 client = ZPLClient(api_key="zpl_xxx")
 
 try:
-    result = client.compute(matrix=[[0, 1], [1, 0]], samples=1000)
+    result = client.compute(matrix=[[0, 1, 0], [1, 0, 1], [0, 1, 0]], samples=1000)
 except ZPLAuthError:
     print("Invalid API key")
 except ZPLQuotaError as e:

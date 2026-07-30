@@ -88,7 +88,7 @@ function sanitizeBaseUrl(candidate: string | undefined, fallback: string): strin
  * const client = new ZPLClient({ apiKey: 'zpl_xxx' });
  *
  * const result = await client.compute({
- *   matrix: [[0,1],[1,0]],
+ *   matrix: [[0,1,0],[1,0,1],[0,1,0]],
  *   samples: 1000,
  * });
  *
