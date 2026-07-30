@@ -6,6 +6,7 @@
 import type {
   ZPLClientConfig,
   ComputeResult,
+  AnalyzeResult,
   BatchComputeResult,
   BatchComputeOptions,
   Usage,
@@ -324,6 +325,80 @@ export class ZPLClient {
     };
 
     return result;
+  }
+
+  /**
+   * Analyse a specific matrix — the engine sees your data.
+   *
+   * `compute()` does not transmit the matrix. It reduces it to a dimension and
+   * a density of ones, sends those two numbers, and the engine generates fresh
+   * random matrices at that density and reports on those. Two entirely
+   * different inputs of equal density therefore receive the same answer, and
+   * nothing in that response indicates the caller's data was never examined.
+   *
+   * This method posts the matrix itself. The engine runs the fold over it and
+   * reports what each operator family concluded, whether any needed the centre
+   * to break a tie, and how far the four agree.
+   *
+   * There is no AIN here, on purpose: one matrix is one observation, so a
+   * proportion over it is 0 or 1 and would say nothing about balance.
+   *
+   * @param options - The matrix to analyse, plus optional timeout / key override
+   * @returns Every family's verdict, with agreement
+   *
+   * @example
+   * ```typescript
+   * const result = await client.analyze({
+   *   matrix: [[0,1,0],[1,0,1],[0,1,0]],
+   * });
+   * console.log(result.families);   // one entry per family
+   * console.log(result.unanimous);  // did all four agree?
+   * ```
+   */
+  async analyze(options: {
+    matrix: BinaryMatrix;
+    timeout?: number;
+    apiKey?: string;
+  }): Promise<AnalyzeResult> {
+    const { matrix, timeout, apiKey } = options;
+
+    // Validated here so a malformed matrix costs nothing: an invalid request
+    // would be refused by the engine anyway, and spending a round trip to
+    // learn that helps no one.
+    try {
+      validateMatrix(matrix);
+    } catch (error) {
+      throw new ZPLValidationError(
+        `Invalid matrix: ${error instanceof Error ? error.message : 'unknown error'}`
+      );
+    }
+
+    const payload: Record<string, unknown> = { matrix };
+    if (apiKey) {
+      payload.api_key = apiKey;
+    }
+
+    const raw = await this._request<{
+      n: number;
+      families: Array<{ family: number; bit: number; tie_broken: boolean }>;
+      ones: number;
+      unanimous: boolean;
+      tokens_used: number;
+      compute_ms?: number;
+    }>('/analyze', { method: 'POST', body: JSON.stringify(payload) }, { timeout });
+
+    return {
+      n: raw.n,
+      families: (raw.families ?? []).map((f) => ({
+        family: f.family,
+        bit: (f.bit === 1 ? 1 : 0) as 0 | 1,
+        tieBroken: Boolean(f.tie_broken),
+      })),
+      ones: raw.ones,
+      unanimous: raw.unanimous,
+      tokensUsed: raw.tokens_used,
+      computeMs: raw.compute_ms,
+    };
   }
 
   /**

@@ -103,6 +103,47 @@ export interface ComputeResult {
 }
 
 /**
+ * One operator family's verdict on a supplied matrix.
+ */
+export interface FamilyVerdict {
+  /** Index into the engine's fixed family list. */
+  family: number;
+  /** The family's output bit for this matrix: 0 or 1. */
+  bit: 0 | 1;
+  /**
+   * The fold reached an exact tie and the centre decided it. A tie means no
+   * majority was found at all — a weaker result than a confident bit, and
+   * anything presenting a verdict should say so rather than hide it.
+   */
+  tieBroken: boolean;
+}
+
+/**
+ * Result of analysing one specific matrix.
+ *
+ * Deliberately carries no `ain` and no `pOutput`. Both describe how output
+ * bits distribute across many sampled matrices; over a single matrix the
+ * proportion is 0 or 1 and says nothing about balance. A score here would be
+ * an invented number wearing the clothes of a measurement.
+ */
+export interface AnalyzeResult {
+  /** Dimension of the matrix that was analysed. */
+  n: number;
+  /** Every family's verdict, in engine order. */
+  families: FamilyVerdict[];
+  /** How many families returned 1. */
+  ones: number;
+  /**
+   * All four families agreed. Unanimity is a stronger result than a
+   * three-to-one split, and the engine's pooled reading could not express
+   * the difference between them.
+   */
+  unanimous: boolean;
+  tokensUsed: number;
+  computeMs?: number;
+}
+
+/**
  * Batch compute result - multiple matrix analyses
  */
 export interface BatchComputeResult {

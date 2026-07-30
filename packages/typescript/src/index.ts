@@ -32,6 +32,8 @@ export type {
   BiasLevel,
   BinaryMatrix,
   ComputeResult,
+  AnalyzeResult,
+  FamilyVerdict,
   BatchComputeResult,
   ComputeOptions,
   BatchComputeOptions,
