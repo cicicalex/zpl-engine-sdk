@@ -215,6 +215,40 @@ print(f"Status: {health.status}")
 print(f"Uptime: {health.uptime_percent:.2f}%")
 ```
 
+## Core Concepts
+
+### p_output - the measurement AIN is derived from
+
+`p_output` is the engine's own reading: **output balance, where 0.500 is
+equilibrium**. `ain` is computed from it, and the computation takes an absolute
+value.
+
+That has one consequence worth knowing before you build on `ain`:
+
+```
+p_output 0.4687  ->  ain 0.9373
+p_output 0.5313  ->  ain 0.9373
+```
+
+**`ain` cannot tell you which side of equilibrium a reading sits on.** Two
+opposite imbalances of equal size return the same AIN. If your question has two
+different failure modes - too permissive vs too strict, over-represented vs
+under-represented, bullish vs bearish - `ain` alone cannot answer it and
+`p_output` can:
+
+```python
+res = client.compute(matrix=[[0, 1, 0], [1, 0, 1], [0, 1, 0]])
+if res.p_output is None:
+    raise RuntimeError("engine did not return p_output")
+
+offset = res.p_output - 0.5                      # signed: negative leans to 0
+side = "toward 1" if offset > 0 else "toward 0" if offset < 0 else "balanced"
+print(f"{res.p_output:.6f} ({side}, {abs(offset):.6f} from 0.500)")
+```
+
+Check for `None` rather than falling back to `0` - a `p_output` of 0 is not
+"missing", it is the most extreme reading the engine can return.
+
 ## Data Models
 
 ### ComputeResult

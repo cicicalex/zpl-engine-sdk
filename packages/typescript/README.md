@@ -141,6 +141,41 @@ neutral/unbiased data is. Display it as a percentage with
 values: `STABLE` · `ACTIVE` · `INHIBITED_HIGH` · `INHIBITED_LOW`.
 Plain `INHIBITED` does not exist.
 
+### p_output — the measurement AIN is derived from
+
+`pOutput` (`p_output` on the wire) is the engine's own reading: **output
+balance, where 0.500 is equilibrium**. `ain` is computed from it, and the
+computation takes an absolute value.
+
+That has one consequence worth knowing before you build on `ain`:
+
+```
+p_output 0.4687  ->  ain 0.9373
+p_output 0.5313  ->  ain 0.9373
+```
+
+**`ain` cannot tell you which side of equilibrium a reading sits on.** Two
+opposite imbalances of equal size return the same AIN. If your question has
+two different failure modes - too permissive vs too strict, over-represented
+vs under-represented, bullish vs bearish - `ain` alone cannot answer it and
+`pOutput` can:
+
+```ts
+const res = await client.compute({
+  matrix: [[0, 1, 0], [1, 0, 1], [0, 1, 0]],
+});
+if (res.pOutput === undefined) throw new Error('engine did not return p_output');
+
+const offset = res.pOutput - 0.5;          // signed: negative leans to 0
+const side = offset > 0 ? 'toward 1' : offset < 0 ? 'toward 0' : 'balanced';
+console.log(`${res.pOutput.toFixed(6)} (${side}, ${Math.abs(offset).toFixed(6)} from 0.500)`);
+```
+
+`pOutput` and `deviation` are optional on the response type because older
+engine builds omitted them. Check for `undefined` rather than falling back to
+`0` - a `pOutput` of 0 is not "missing", it is the most extreme reading the
+engine can return.
+
 ### Binary Matrix
 
 Input data for AIN calculation. An N×N matrix where each element is 0 or 1.
