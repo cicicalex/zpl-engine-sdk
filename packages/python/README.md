@@ -454,18 +454,34 @@ python examples/forex_stability.py
 
 ## API Plans and Pricing
 
-| Plan | Tokens/Month | Price USD | Price EUR |
-|------|--------------|-----------|-----------|
-| Free | 100 | $0 | €0 |
-| Basic | 10,000 | $10 | €9 |
-| Pro | 50,000 | $29 | €27 |
-| GamePro | 150,000 | $69 | €63 |
-| Studio | 500,000 | $149 | €137 |
-| Agent | 2,000,000 | $199 | €183 |
-| Enterprise | 10,000,000 | $499 | €459 |
-| XL | Unlimited | $999 | €919 |
+| Plan | Tokens/Month | Max dimension | API keys | Price USD |
+|------|--------------|---------------|----------|-----------|
+| Free | 5,000 | 9 | 1 | $0 |
+| Basic | 10,000 | 16 | 1 | $10 |
+| Pro | 50,000 | 25 | 3 | $29 |
+| GamePro | 150,000 | 32 | 5 | $69 |
+| Studio | 500,000 | 48 | 10 | $149 |
+| Agent | 2,000,000 | 48 | 50 | $199 |
+| Enterprise | 10,000,000 | 64 | 25 | $499 |
+| Enterprise XL | 50,000,000 | 100 | 50 | $999 |
 
-**1 token = 1 compute operation**
+**One call does not cost one token.** The price of a call is set by its
+dimension, in steps:
+
+| Dimension | Tokens per call |
+|-----------|-----------------|
+| 3–5 | 1 |
+| 6–9 | 2 |
+| 10–16 | 5 |
+| 17–25 | 15 |
+| 26–32 | 40 |
+| 33–48 | 150 |
+| 49–64 | 500 |
+| 65–100 | 2000 |
+
+A `/sweep` runs 19 of those passes and costs 19 times the single-call price.
+100 is the engine's own maximum, not a plan ceiling - no plan accepts a larger
+matrix.
 
 ## API Endpoints
 
