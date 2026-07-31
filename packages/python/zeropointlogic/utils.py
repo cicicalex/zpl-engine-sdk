@@ -316,9 +316,21 @@ def validate_matrix(matrix: list[list[int]]) -> tuple[bool, str]:
             "dimension >= 3."
         )
     if n > 100:
+        # AUDIT 2026-07-31: this said "upgrade plan if you need higher d", which
+        # is advice no amount of money can follow. 100 is a hard engine constant
+        # - BinaryMatrix::MAX_N - and the request is refused before any plan is
+        # consulted. The most expensive plan, Enterprise XL at $999/mo, grants
+        # exactly max_d 100, so there is nothing above this to buy.
+        #
+        # The message also conflated two different limits. Below 100 the
+        # per-plan ceiling (9/16/25/32/48/64/100) is real and upgrading does
+        # raise it - and the engine says so itself, with "Dimension X exceeds
+        # plan limit of Y". That is the case where the old sentence would have
+        # been useful, and it is the one case it never appeared in.
         return False, (
-            f"Matrix must be at most 100x100 (got {n}x{n}). The engine "
-            "rejects dimension > 100; upgrade plan if you need higher d."
+            f"Matrix must be at most 100x100 (got {n}x{n}). 100 is the engine's "
+            "hard maximum, not a plan limit - no plan accepts a larger matrix, "
+            "including the highest. Reduce the matrix instead."
         )
 
     row_lengths = set(len(row) for row in matrix)
