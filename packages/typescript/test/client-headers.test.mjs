@@ -32,6 +32,36 @@ test('ZPLClient sends ADR 0002 headers by default', async () => {
   assert.equal(headerGet(seen, 'X-ZPL-Client-Version'), SDK_VERSION);
 });
 
+test('SDK_VERSION is the version this package actually ships as', async () => {
+  // AUDIT 2026-07-31: the assertion above compares the header to SDK_VERSION,
+  // and the header is built from SDK_VERSION. It compares the constant to
+  // itself and passes for any value - which is how the package reached 2.1.0
+  // in package.json while this constant still said 2.0.6. Every
+  // X-ZPL-Client-Version header from a 2.1.0 install would have reported
+  // 2.0.6, permanently: a published tarball cannot be edited.
+  //
+  // What that costs, beyond tidiness: admin funnel dashboards read 2.1.0
+  // adoption as zero, and setting the engine's ZPL_MIN_VERSION_SDK_TYPESCRIPT
+  // floor to 2.1.0 later would 426 every up-to-date install.
+  //
+  // The only assertion that can catch it is one against a source the constant
+  // is not derived from.
+  const { readFile } = await import('node:fs/promises');
+  const { fileURLToPath } = await import('node:url');
+  const { dirname, join } = await import('node:path');
+
+  const root = dirname(dirname(fileURLToPath(import.meta.url)));
+  const pkg = JSON.parse(await readFile(join(root, 'package.json'), 'utf-8'));
+
+  assert.equal(
+    SDK_VERSION,
+    pkg.version,
+    `SDK_VERSION is '${SDK_VERSION}' but this package publishes as '${pkg.version}'. ` +
+      `Every client-version header, heartbeat and version gate would report the wrong ` +
+      `number, and npm does not let you edit a published tarball.`,
+  );
+});
+
 test('ZPLClient allows overriding ADR 0002 headers', async () => {
   let seen;
   const fetchMock = async (_url, init) => {
