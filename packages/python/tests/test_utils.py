@@ -140,20 +140,32 @@ class TestValidateMatrix(unittest.TestCase):
 class TestInterpretAIN(unittest.TestCase):
     """Test interpret_ain function."""
 
-    def test_perfect_neutrality(self):
-        """Test interpretation of perfect neutrality."""
-        assert interpret_ain(0.95, "short") == "Perfect"
+    # AUDIT 2026-07-31: these three asserted the vocabulary this SDK invented,
+    # not the engine's. They pinned 0.95 as "Perfect" where the engine says
+    # HIGHLY_NEUTRAL and reserves its top band for 0.96; 0.65 as "Good" where
+    # the engine says MODERATE_BIAS; and 0.50 as "Fair" or "Good" where the
+    # engine says SIGNIFICANT_BIAS. They passed for as long as the defect
+    # existed, which is what a test written from the implementation does.
+    #
+    # Re-pointed at the engine's bands. tests/test_interpret_bands.py sweeps the
+    # full range and cross-checks the TypeScript SDK; these keep the named
+    # cases that used to be wrong.
+
+    def test_top_of_scale(self):
+        """0.96 and above is the engine's highest band, and 0.95 is not."""
+        assert interpret_ain(0.96, "short") == "Certified"
+        assert interpret_ain(0.95, "short") == "Highly neutral"
         assert "neutral" in interpret_ain(0.95, "medium").lower()
 
     def test_high_bias(self):
-        """Test interpretation of high bias."""
-        assert interpret_ain(0.20, "short") == "Critical"
-        assert "critical" in interpret_ain(0.20, "long").lower()
+        """Below 0.40 the engine reports HIGH_BIAS."""
+        assert interpret_ain(0.20, "short") == "High bias"
+        assert "severe" in interpret_ain(0.20, "long").lower()
 
     def test_moderate_values(self):
-        """Test interpretation of moderate values."""
-        assert interpret_ain(0.50, "short") in ("Fair", "Good")
-        assert interpret_ain(0.65, "short") == "Good"
+        """The middle of the range is bias, and the wording says so."""
+        assert interpret_ain(0.50, "short") == "Significant bias"
+        assert interpret_ain(0.65, "short") == "Moderate bias"
 
     def test_invalid_ain(self):
         """Test with invalid AIN value."""

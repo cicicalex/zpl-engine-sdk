@@ -212,30 +212,43 @@ export function interpretStatus(status: AINStatus): string {
 }
 
 /**
- * Create a detailed interpretation of AIN result
+ * Human-readable interpretation of an AIN reading.
+ *
+ * AUDIT 2026-07-31: this used bands 0.95 / 0.8 / 0.7 / 0.6 / 0.4 / 0.2 while
+ * the Python SDK used 0.85 / 0.70 / 0.55 / 0.40 / 0.25, and neither matched the
+ * engine's own ain_status. Measured, same readings, both SDKs:
+ *
+ *   ain 0.87  TS "Excellent neutrality"   Python "Perfectly Neutral"   engine NEUTRAL
+ *   ain 0.75  TS "Good neutrality"        Python "Highly Neutral"      engine MODERATE_BIAS
+ *   ain 0.58  TS "Weak neutrality"        Python "Moderately Neutral"  engine SIGNIFICANT_BIAS
+ *
+ * So the same number described differently depending on which language a team
+ * happened to use, and both softer than the engine that produced it. A caller
+ * comparing notes with a colleague on the other SDK would find they disagreed
+ * about the same result.
+ *
+ * These are the engine's six bands and its boundaries. The wording is shared
+ * with the Python SDK word for word.
+ *
  * @param ain - AI Neutrality Index (0-1)
- * @returns Human-friendly interpretation
  */
 export function interpretAIN(ain: number): string {
-  if (ain >= 0.95) {
-    return 'Exceptional neutrality. System operates in near-perfect neutral equilibrium.';
+  if (ain >= 0.96) {
+    return 'Certified neutral. The reading sits in the engine\'s highest band.';
+  }
+  if (ain >= 0.9) {
+    return 'Highly neutral. Strongly balanced, close to equilibrium.';
   }
   if (ain >= 0.8) {
-    return 'Excellent neutrality. System maintains strong neutral properties with minimal bias.';
-  }
-  if (ain >= 0.7) {
-    return 'Good neutrality. System exhibits stable neutral behavior suitable for analysis.';
+    return 'Neutral. Balanced within the engine\'s neutral band.';
   }
   if (ain >= 0.6) {
-    return 'Moderate neutrality. Some bias patterns detected but system remains generally neutral.';
+    return 'Moderate bias. A noticeable imbalance the engine reports as bias, not neutrality.';
   }
   if (ain >= 0.4) {
-    return 'Weak neutrality. Significant bias present. Use with caution for critical decisions.';
+    return 'Significant bias. Substantial imbalance; treat conclusions with caution.';
   }
-  if (ain >= 0.2) {
-    return 'Poor neutrality. Strong bias detected. Recommend investigation and mitigation.';
-  }
-  return 'Critical bias. System heavily skewed. Immediate intervention required.';
+  return 'High bias. Severe imbalance.';
 }
 
 /**

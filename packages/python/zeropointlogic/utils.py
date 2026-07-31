@@ -204,30 +204,50 @@ def interpret_ain(ain: float, verbosity: str = "short") -> str:
     if verbosity not in ("short", "medium", "long"):
         raise ValueError(f"verbosity must be 'short', 'medium', or 'long', got {verbosity}")
 
-    if ain >= 0.85:
-        short = "Perfect"
-        medium = "Perfectly Neutral"
-        long = "Excellent neutrality with minimal bias detected. Data distribution is ideal."
-    elif ain >= 0.70:
-        short = "Excellent"
+    # AUDIT 2026-07-31: these bands were 0.85 / 0.70 / 0.55 / 0.40 / 0.25 while
+    # the TypeScript SDK used 0.95 / 0.8 / 0.7 / 0.6 / 0.4 / 0.2, and neither
+    # matched the engine's ain_status. Measured, same readings, both SDKs:
+    #
+    #   ain 0.87  TS "Excellent neutrality"  here "Perfectly Neutral"   engine NEUTRAL
+    #   ain 0.75  TS "Good neutrality"       here "Highly Neutral"      engine MODERATE_BIAS
+    #   ain 0.58  TS "Weak neutrality"       here "Moderately Neutral"  engine SIGNIFICANT_BIAS
+    #
+    # "Perfectly Neutral" started at 0.85, covering the whole of the engine's
+    # NEUTRAL band and most of HIGHLY_NEUTRAL. The engine reserves its top name
+    # for 0.96 and above.
+    #
+    # These are the engine's six bands and its boundaries, worded identically to
+    # the TypeScript SDK.
+    if ain >= 0.96:
+        short = "Certified"
+        medium = "Certified Neutral"
+        long = "Certified neutral. The reading sits in the engine's highest band."
+    elif ain >= 0.90:
+        short = "Highly neutral"
         medium = "Highly Neutral"
-        long = "Strong neutrality with very low bias. Suitable for most applications."
-    elif ain >= 0.55:
-        short = "Good"
-        medium = "Moderately Neutral"
-        long = "Acceptable neutrality with minor bias patterns. Consider mitigation strategies."
+        long = "Highly neutral. Strongly balanced, close to equilibrium."
+    elif ain >= 0.80:
+        short = "Neutral"
+        medium = "Neutral"
+        long = "Neutral. Balanced within the engine's neutral band."
+    elif ain >= 0.60:
+        short = "Moderate bias"
+        medium = "Moderate Bias"
+        long = (
+            "Moderate bias. A noticeable imbalance the engine reports as bias, "
+            "not neutrality."
+        )
     elif ain >= 0.40:
-        short = "Fair"
-        medium = "Slightly Biased"
-        long = "Noticeable bias detected. Mitigation measures are recommended."
-    elif ain >= 0.25:
-        short = "Poor"
-        medium = "Moderately Biased"
-        long = "Significant bias patterns. Immediate mitigation needed."
+        short = "Significant bias"
+        medium = "Significant Bias"
+        long = (
+            "Significant bias. Substantial imbalance; treat conclusions with "
+            "caution."
+        )
     else:
-        short = "Critical"
-        medium = "Heavily Biased"
-        long = "Critical bias levels detected. Immediate intervention required."
+        short = "High bias"
+        medium = "High Bias"
+        long = "High bias. Severe imbalance."
 
     if verbosity == "short":
         return short
