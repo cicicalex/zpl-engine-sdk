@@ -155,6 +155,27 @@ export interface AnalyzeResult {
    * the difference between them.
    */
   unanimous: boolean;
+  /**
+   * Cells set to 1 in the matrix you sent, and the total.
+   *
+   * AUDIT 2026-07-31: the engine was swept over 3..=100. At every even
+   * dimension the four family bits for an all-zeros matrix are identical to
+   * those for an all-ones matrix - 49 of 49 even dimensions, none of the 49
+   * odd ones - so the two most opposite inputs you can send came back with the
+   * same verdict. Every paid ceiling except Pro's 25 is even: 16, 32, 48, 64,
+   * 100.
+   *
+   * These three fields are your own matrix counted back to you, so a
+   * degenerate input is visible as degenerate whatever the verdict says.
+   *
+   * Optional because an engine older than that sweep does not send them.
+   * Check for undefined rather than defaulting to 0 - an inputOnes of 0 means
+   * an all-zeros matrix, which is a real answer, not a missing one.
+   */
+  inputOnes?: number;
+  cells?: number;
+  /** Every cell identical. The verdict alone cannot show this at even n. */
+  degenerate?: boolean;
   tokensUsed: number;
   computeMs?: number;
 }

@@ -383,6 +383,9 @@ export class ZPLClient {
       families: Array<{ family: number; bit: number; tie_broken: boolean }>;
       ones: number;
       unanimous: boolean;
+      input_ones?: number;
+      cells?: number;
+      degenerate?: boolean;
       tokens_used: number;
       compute_ms?: number;
     }>('/analyze', { method: 'POST', body: JSON.stringify(payload) }, { timeout });
@@ -396,6 +399,12 @@ export class ZPLClient {
       })),
       ones: raw.ones,
       unanimous: raw.unanimous,
+      // Left undefined when the engine predates the fields, rather than
+      // defaulted to 0 - an inputOnes of 0 is an all-zeros matrix, a real
+      // answer, and the two must not be confused.
+      inputOnes: raw.input_ones,
+      cells: raw.cells,
+      degenerate: raw.degenerate,
       tokensUsed: raw.tokens_used,
       computeMs: raw.compute_ms,
     };

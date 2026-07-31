@@ -223,6 +223,29 @@ class AnalyzeResult:
     split, and the engine's pooled reading could not express the difference.
     """
 
+    input_ones: Optional[int] = None
+    """Cells set to 1 in the matrix you sent.
+
+    AUDIT 2026-07-31: the engine was swept over 3..=100. At every even
+    dimension the four family bits for an all-zeros matrix are identical to
+    those for an all-ones matrix - 49 of 49 even dimensions, none of the 49 odd
+    ones - so the two most opposite inputs you can send came back with the same
+    verdict. Every paid ceiling except Pro's 25 is even: 16, 32, 48, 64, 100.
+
+    This and the two fields below are your own matrix counted back to you, so a
+    degenerate input stays visible whatever the verdict says.
+
+    ``None`` when the engine predates the sweep. Check for ``None`` rather than
+    treating it as 0 - an ``input_ones`` of 0 means an all-zeros matrix, which
+    is a real answer, not a missing one.
+    """
+
+    cells: Optional[int] = None
+    """Total cells, so ``input_ones`` can be read as a proportion."""
+
+    degenerate: Optional[bool] = None
+    """Every cell identical. The verdict alone cannot show this at even n."""
+
     tokens_used: int = 0
     compute_ms: Optional[float] = None
 

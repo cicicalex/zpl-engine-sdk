@@ -142,6 +142,12 @@ def analyze_result_from_engine_dict(payload: dict) -> "AnalyzeResult":
         families=families,
         ones=int(payload.get("ones", sum(f.bit for f in families))),
         unanimous=bool(payload.get("unanimous", False)),
+        # Left as None when absent rather than coerced to 0: an input_ones of 0
+        # is an all-zeros matrix, a real answer, and the two must not collapse
+        # into each other.
+        input_ones=payload.get("input_ones"),
+        cells=payload.get("cells"),
+        degenerate=payload.get("degenerate"),
         tokens_used=int(payload.get("tokens_used", 0)),
         compute_ms=payload.get("compute_ms"),
     )
