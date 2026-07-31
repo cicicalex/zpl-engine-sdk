@@ -251,11 +251,39 @@ export async function parseEngineHttpError(res: Response): Promise<string> {
     cfMitigated ||
     (cfRay && res.status >= 400 && !ct.includes('application/json'))
   ) {
+    // AUDIT 2026-07-31, reproduced against production, not inferred:
+    //
+    //   GET /sweep?d=100&samples=50000
+    //     -> 504 after 60.2s, server: cloudflare, content-type text/html
+    //
+    // 60.2s is the engine's own sweep timeout. The engine returns its JSON
+    // {"error":"Sweep timeout exceeded 60s","code":504}, and Cloudflare
+    // replaces the body with its branded HTML page, so the engine's message
+    // never reaches the caller and every JSON parse fails.
+    //
+    // Both halves of what we told them were then wrong. The body carries
+    // Cloudflare branding, so the old snippet check reported "Cloudflare
+    // blocked the request" - it blocked nothing, the origin ran out of time.
+    // And the causes list was fixed text printed for every status, so a
+    // customer whose computation timed out was advised to change their
+    // User-Agent. Bot blocking is 403 and rate limiting is 429; neither can
+    // produce a 504.
+    //
+    // d=100 is Enterprise XL's own ceiling and samples=50000 is the documented
+    // maximum, so this is the top of the paid ladder telling its most expensive
+    // customer to look at the wrong thing.
+    const timedOut = res.status === 504 || res.status === 524 || res.status === 522;
+
     let snippet = '';
     try {
       const body = await res.text();
       if (/Just a moment|Checking your browser|cf-browser-verification|cf_chl_/i.test(body)) {
         snippet = 'Cloudflare browser challenge intercepted the request';
+      } else if (timedOut) {
+        // Checked before the branding test: the timeout page is Cloudflare-branded
+        // too, and "blocked" is the wrong word for a request that was forwarded,
+        // ran, and exceeded the clock.
+        snippet = 'the engine did not answer in time and Cloudflare returned its timeout page';
       } else if (/Attention Required|cloudflare/i.test(body)) {
         snippet = 'Cloudflare blocked the request';
       } else {
@@ -264,13 +292,24 @@ export async function parseEngineHttpError(res: Response): Promise<string> {
     } catch {
       /* keep generic */
     }
+
+    const causes = timedOut
+      ? [
+          '  • The computation exceeded the engine\'s limit — 30s for /compute, 60s for /sweep.',
+          '  • Lower `samples` first: it scales the work linearly and costs no extra tokens.',
+          '  • Then lower the dimension. /sweep runs 19 passes, so it reaches the ceiling first.',
+        ]
+      : [
+          '  • User-Agent blocked as a bot — use a browser-like User-Agent string.',
+          '  • Rate limits — wait and retry.',
+        ];
+
     const ray = cfRay ? ` (cf-ray: ${cfRay})` : '';
     return [
       `Engine ${res.status} via Cloudflare${ray}: ${snippet}.`,
       '',
       'Likely causes:',
-      '  • User-Agent blocked as a bot — use a browser-like User-Agent string.',
-      '  • Rate limits — wait and retry.',
+      ...causes,
       '  • Check https://engine.zeropointlogic.io/health',
       ray ? `  • Include cf-ray ${cfRay} in bug reports.` : '',
     ]
