@@ -19,6 +19,7 @@
   ],
   "scripts": {
     "build": "tsc",
+    "prepublishOnly": "npm run build",
     "build:watch": "tsc --watch",
     "type-check": "tsc --noEmit",
     "test": "npm run build && node --test test/*.mjs",
