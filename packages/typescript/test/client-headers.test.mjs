@@ -13,10 +13,14 @@ test('ZPLClient sends ADR 0002 headers by default', async () => {
   let seen;
   const fetchMock = async (_url, init) => {
     seen = init.headers;
+    // The engine's actual /health body. It used to read `status: 'healthy'`,
+    // a value no engine has ever sent — mocks that echo the SDK's wishes
+    // rather than the wire are how the HealthResponse type stayed wrong.
     return new Response(
       JSON.stringify({
-        status: 'healthy',
+        status: 'ok',
         version: 'test',
+        uptime_seconds: 42,
       }),
       { status: 200, headers: { 'content-type': 'application/json' } }
     );

@@ -46,10 +46,17 @@ You must obtain a key first, by ONE of these three paths:
    account. Free plan = 5,000 tokens/month, no credit card required.
 2. Verify your email by clicking the link we send (verification gates
    dashboard access).
-3. Open **<https://zeropointlogic.io/dashboard/api-keys>**
-4. Click **Create New Key**, name it (e.g. `production`), hit **Generate**.
-5. **Copy the plaintext key now** — the dashboard only shows it once.
-   It looks like `zpl_u_<48 hex chars>` (54 chars total).
+3. Sign in. You land on **/dashboard/onboarding**, which creates your first
+   key for you and displays it there — you do not create one yourself.
+4. **Copy the plaintext key from that page.** It is shown once and then
+   wiped. It looks like `zpl_u_<48 hex chars>` (54 chars total).
+
+Missed it? **/dashboard/api-keys** shows only the prefix, and on Free and
+Basic the **Create New Key** button is disabled: both plans allow exactly
+**1** active key and you already have it. Revoke the existing key there and
+create a replacement, or move to Pro (3 keys). `POST /api/keys` enforces the
+same cap with `403 Key limit reached`, so scripting around the button does
+not help.
 
 ### 2. CLI (for local dev)
 
@@ -110,9 +117,11 @@ const result = await client.compute({
   samples: 1000,
 });
 
-console.log(`AIN Score: ${result.ain}`);      // 0.73
-console.log(`Status: ${result.status}`);      // 'STABLE'
-console.log(`Is Neutral: ${result.isNeutral}`); // true
+console.log(`AIN Score: ${result.ain}`);        // 0.73
+console.log(`Status: ${result.status}`);        // 'STABLE' (stability regime)
+console.log(`Band: ${result.ainStatus}`);       // 'MODERATE_BIAS'
+console.log(`Is Neutral: ${result.isNeutral}`); // false — 0.73 is below the
+                                                // engine's NEUTRAL floor of 0.80
 ```
 
 ## Core Concepts
@@ -193,8 +202,9 @@ Input data for AIN calculation. An N×N matrix where each element is 0 or 1.
 const client = new ZPLClient({
   apiKey: 'zpl_xxx',                    // Required
   baseUrl: 'https://engine.zeropointlogic.io', // Optional
-  timeout: 30000,                       // Optional (ms)
-  retries: 3,                           // Optional
+  timeout: 65000,                       // Optional (ms, default 65000 — keep it
+                                        //   above the engine's 60s sweep ceiling)
+  retries: 3,                           // Optional (timeouts are never retried)
   debug: false,                         // Optional
 });
 ```
@@ -206,21 +216,32 @@ Run AIN computation on a single matrix.
 ```typescript
 const result = await client.compute({
   matrix: [[0, 1, 0], [1, 0, 1], [0, 1, 0]],
-  samples: 1000,                        // Optional (default: 1000)
-  timeout: 30000,                       // Optional
+  samples: 1000,                        // Optional (default: 1000; 100–50,000)
+  timeout: 65000,                       // Optional (default: 65000)
 });
 
 // result: ComputeResult
 // {
 //   ain: 0.73,
-//   status: 'STABLE',
-//   isNeutral: true,
-//   biasLevel: 'low',
+//   status: 'STABLE',            // stability regime
+//   ainStatus: 'MODERATE_BIAS',  // AIN band — a different field
+//   isNeutral: false,            // taken from the band, not a threshold of our own
+//   biasLevel: 'moderate',       // same band, so the two cannot disagree
 //   tokensUsed: 1,
 //   tokensRemaining: 999,
 //   ...
 // }
 ```
+
+`samples` must be between 100 and 50,000: the engine clamps anything outside
+that range and returns the clamped figure, so the SDK refuses rather than let
+you record a sample count that never ran.
+
+Keep `timeout` **above** the engine's own ceilings — 30s for `/compute`, 60s
+for `/sweep`. The engine deducts tokens before it computes and refunds only
+on a timeout it issues itself, so a client that gives up first pays for an
+answer it then throws away. For the same reason a request that hits the
+deadline is never retried.
 
 ### batchCompute()
 
@@ -254,48 +275,73 @@ const usage = await client.getUsage();
 
 // {
 //   plan: 'pro',
-//   dailyLimit: 10000,
-//   monthlyLimit: 300000,
-//   usedToday: 150,
-//   usedThisMonth: 5000,
-//   tokensRemainingToday: 9850,
-//   tokensRemainingMonth: 295000,
-//   resetAtToday: '2024-01-15T00:00:00Z',
-//   resetAtMonth: '2024-02-01T00:00:00Z',
+//   tokensUsed: 5000,
+//   tokensRemaining: 45000,
+//   tokensQuota: 50000,
+//   bonusBalance: 0,
+//   percentUsed: 10,
+//   maxDimension: 25,
+//   source: 'engine_log',
+//   usageMeasured: true,
+//   engineUnreachable: false,
+//   retrievedAt: Date,
 // }
+```
+
+**Check `usageMeasured` before displaying the numbers.** Three different
+server-side failures produce `tokensUsed: 0`, which is also what an idle
+account produces, so the server reports how it obtained the figure —
+`engine_log` (read from the engine), `engine_user_not_found`, or
+`user_table_fallback`. Only the first is a measurement. Your quota is
+enforced by the engine on every request regardless of what this endpoint
+managed to read, so an unmeasured zero is the only warning you get before a
+request is refused.
+
+```typescript
+if (!usage.usageMeasured) {
+  console.warn(`usage unknown (source=${usage.source}) — showing quota only`);
+}
 ```
 
 ### getPlans()
 
-List all available plans and pricing.
+List all available plans and pricing. These are the fields `GET /plans`
+returns; there is no daily limit and no feature list in the response.
 
 ```typescript
 const plans = await client.getPlans();
 
 // {
 //   plans: [
-//     { id: 'free', name: 'Free', price: 0, dailyLimit: 10, ... },
-//     { id: 'basic', name: 'Basic', price: 10, dailyLimit: 1000, ... },
+//     { name: 'Free',  maxDimension: 9,  tokensPerMonth: 5000,  maxKeys: 1, priceUsd: 0,  unlimited: false },
+//     { name: 'Basic', maxDimension: 16, tokensPerMonth: 10000, maxKeys: 1, priceUsd: 10, unlimited: false },
 //     // ...
 //   ],
 //   fetchedAt: Date,
 // }
 ```
 
+`unlimited` is the engine's flag for any plan at or above 50,000,000 tokens
+per month — today Enterprise XL alone, whose cap is exactly that figure. It
+is not an absence of a limit; `tokensPerMonth` is what is enforced.
+
 ### getHealth()
 
-Check API health status.
+Check that the engine is answering.
 
 ```typescript
 const health = await client.getHealth();
 
 // {
-//   status: 'healthy',
-//   uptime: 99.99,
-//   version: '1.0.0',
-//   timestamp: '2024-01-15T12:34:56Z',
+//   status: 'ok',        // the engine sends no other value
+//   version: '3.2.0',
+//   uptimeSeconds: 4212, // since the engine process started
 // }
 ```
+
+There is no uptime percentage, latency or error rate on this endpoint — the
+engine does not measure them. A `getHealth()` call that resolves at all is
+the availability signal.
 
 ## Utility Functions
 
@@ -306,7 +352,9 @@ Convert price array to binary matrix.
 ```typescript
 import { pricesToMatrix } from '@zeropointlogic/sdk';
 
-const prices = [100, 102, 101, 103, 105];
+// `prices.length` must be GREATER than `window`, and a square window x window
+// matrix needs exactly 2 * window prices. 40 prices at window 20 → a 20x20.
+const prices = Array.from({ length: 40 }, (_, i) => 100 + Math.sin(i / 3));
 const matrix = pricesToMatrix(prices, 20); // window size 20
 ```
 
@@ -340,20 +388,37 @@ Get human-readable interpretation of AIN score.
 import { interpretAIN } from '@zeropointlogic/sdk';
 
 console.log(interpretAIN(0.85));
-// "Excellent neutrality. System maintains strong neutral properties..."
+// "Neutral. Balanced within the engine's neutral band."
+console.log(interpretAIN(0.73));
+// "Moderate bias. A noticeable imbalance the engine reports as bias, not neutrality."
 ```
+
+The wording and the boundaries are the engine's six `ain_status` bands, word
+for word identical to the Python SDK, so the same reading never reads
+differently depending on which language a team uses.
 
 ### ainToBiasLevel()
 
-Convert AIN score to bias classification.
+Convert an AIN score to a bias classification, on the engine's own band
+boundaries.
 
 ```typescript
-import { ainToBiasLevel } from '@zeropointlogic/sdk';
+import { ainToBiasLevel, ainStatusToBiasLevel } from '@zeropointlogic/sdk';
 
-ainToBiasLevel(0.85); // 'none'
-ainToBiasLevel(0.72); // 'low'
-ainToBiasLevel(0.55); // 'moderate'
+ainToBiasLevel(0.92); // 'none'      — CERTIFIED_NEUTRAL / HIGHLY_NEUTRAL
+ainToBiasLevel(0.85); // 'low'       — NEUTRAL
+ainToBiasLevel(0.72); // 'moderate'  — MODERATE_BIAS
+ainToBiasLevel(0.55); // 'high'      — SIGNIFICANT_BIAS
+ainToBiasLevel(0.20); // 'critical'  — HIGH_BIAS
+
+// When you hold the engine's band, derive from it instead — it is the
+// engine's own verdict on that reading, and cannot round across a boundary.
+ainStatusToBiasLevel('MODERATE_BIAS'); // 'moderate'
 ```
+
+The `none`/`low` labels cover the engine's three neutral bands and
+`moderate`/`high`/`critical` its three bias bands, so the split between them
+is the engine's NEUTRAL floor of 0.80.
 
 ## Error Handling
 
@@ -403,10 +468,11 @@ const matrix = pricesToMatrix(btcPrices, 15);
 
 const result = await client.compute({ matrix, samples: 5000 });
 
-if (result.ain >= 0.7) {
-  console.log('Market shows balanced behavior');
+// `isNeutral` is the engine's own band, not a threshold picked here.
+if (result.isNeutral) {
+  console.log('Balanced behaviour within the engine\'s neutral band');
 } else {
-  console.log('Market shows directional bias');
+  console.log(`Imbalance: ${result.ainStatus}`);
 }
 ```
 
@@ -468,7 +534,9 @@ function MarketAnalysis() {
       apiKey: process.env.REACT_APP_ZPL_KEY,
     });
 
-    const prices = [100, 102, 101, 103, 105];
+    // 40 prices for the default window of 20 → a 20x20 matrix. Fewer than
+    // `window + 1` prices makes pricesToMatrix throw a ZPLValidationError.
+    const prices = Array.from({ length: 40 }, (_, i) => 100 + Math.sin(i / 3));
     const matrix = pricesToMatrix(prices);
     const res = await client.compute({ matrix, samples: 1000 });
 
@@ -513,7 +581,8 @@ The SDK automatically handles:
 - **Retry logic** with exponential backoff (3 attempts by default)
 - **Rate limit detection** (HTTP 429)
 - **Quota exhaustion** (HTTP 402) with token tracking
-- **Timeout management** (30s default)
+- **Timeout management** (65s default; a request that hits the deadline is not
+  retried — see `compute()` above for why)
 
 ## Troubleshooting
 
@@ -530,12 +599,15 @@ The SDK retries automatically, but if you hit this frequently:
 You've exceeded your plan's monthly/daily limit. Upgrade your plan or wait for quota reset.
 
 ### Timeout errors
-Increase `timeout` in client config or reduce matrix size/samples:
+Reduce matrix size / samples, or raise `timeout` — never lower it. The default
+is already 65000; 60000 would put your deadline *below* the engine's 60s
+`/sweep` ceiling, which is how a caller ends up paying for a computation it
+then abandons.
 
 ```typescript
 const client = new ZPLClient({
   apiKey: 'zpl_xxx',
-  timeout: 60000, // 60 seconds
+  timeout: 120000, // 120 seconds — above the engine's own ceilings
 });
 ```
 

@@ -76,6 +76,8 @@ export {
   createRandomMatrix,
   validateMatrix,
   ainToBiasLevel,
+  ainStatusToBiasLevel,
+  isNeutralReading,
   interpretStatus,
   interpretAIN,
   generateRequestId,

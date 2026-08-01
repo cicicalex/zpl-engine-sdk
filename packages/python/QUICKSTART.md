@@ -96,18 +96,22 @@ client = ZPLClient(api_key="zpl_u_xxx")
 # Check usage
 usage = client.get_usage()
 print(f"Plan: {usage.plan}")
-print(f"Usage: {usage.usage_percent:.1f}%")
-print(f"Tokens left: {usage.tokens_remaining}")
+if usage.usage_measured:
+    print(f"Usage: {usage.usage_percent:.1f}%")
+    print(f"Tokens left: {usage.tokens_remaining}")
+else:
+    # The server told us it could not read your usage from the engine.
+    print(f"Usage: unknown (source={usage.source})")
 
 # View all plans
 plans = client.get_plans()
 for plan in plans:
-    print(f"{plan.name}: €{plan.price_eur:.2f}/mo")
+    print(f"{plan.name}: ${plan.price_usd:.0f}/mo, {plan.tokens_per_month:,} tokens")
 
 # Check engine health
 health = client.get_health()
-print(f"Status: {health.status}")
-print(f"Uptime: {health.uptime_percent:.2f}%")
+print(f"Status: {health.status}")                  # "ok"
+print(f"Process uptime: {health.uptime_seconds}s")
 ```
 
 ## Error Handling
@@ -210,11 +214,15 @@ Plain `INHIBITED` is not a value.
 
 ```python
 # ComputeResult
-result.is_neutral(threshold=0.7)  # Check if AIN >= threshold
+result.is_neutral()                # The engine's verdict: its ain_status band,
+                                   #   or its NEUTRAL floor of 0.80
+result.is_neutral(threshold=0.65)  # Or your own threshold, against ain
 result.is_stable()                 # Check if status == "STABLE"
 result.has_bias()                  # Check if ain_status is a *_BIAS band
+result.bias_level                  # none | low | moderate | high | critical
 
 # UsageInfo
+usage.usage_measured               # True only when the server read the engine
 usage.usage_percent                # Get usage as percentage (0-100)
 usage.is_unlimited                 # Check if plan is unlimited
 
@@ -222,7 +230,7 @@ usage.is_unlimited                 # Check if plan is unlimited
 plan.is_free()                     # Check if free tier
 
 # HealthStatus
-health.is_healthy()                # Check if up and >99% uptime
+health.is_healthy()                # True when the engine answered and said ok
 ```
 
 ## Environment Variables

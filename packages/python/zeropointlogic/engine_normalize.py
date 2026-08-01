@@ -101,6 +101,25 @@ def compute_result_from_engine_dict(
         else None
     )
 
+    # AUDIT 2026-08-01: `samples` was taken from the caller's argument - the
+    # number that was ASKED for - and stored as the number that ran. The engine
+    # does not honour an out-of-range request, it clamps it:
+    # `req.samples.unwrap_or(1000).clamp(100, 50_000)`, and it returns the
+    # clamped figure in the response. So a caller who asked for 5 got a result
+    # object saying 5 samples over a run of 100, and one who asked for 200,000
+    # got a result claiming four times the work that was actually done. The SDK
+    # now reports the engine's own figure whenever the engine sent one, and
+    # falls back to the requested value only when it did not (an older engine,
+    # or a synthesised payload). The client rejects out-of-range counts up
+    # front, so the two should now agree - and when they do not, the engine's
+    # number is the true one.
+    samples_reported = data.get("samples")
+    samples_val = (
+        int(samples_reported)
+        if isinstance(samples_reported, (int, float)) and not isinstance(samples_reported, bool)
+        else samples
+    )
+
     return ComputeResult(
         ain=_num(data, "ain", default=0.0),
         status=status,
@@ -109,7 +128,7 @@ def compute_result_from_engine_dict(
         p_output=p_output_val,
         deviation=deviation_val,
         matrix_size=matrix_size,
-        samples=samples,
+        samples=samples_val,
         ain_status=ain_status_s,
         compute_ms=compute_ms,
     )

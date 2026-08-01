@@ -35,6 +35,9 @@ import {
   validateMatrix,
   sleep,
   normalizeEngineComputeResult,
+  ainToBiasLevel,
+  ainStatusToBiasLevel,
+  isNeutralReading,
 } from './utils.js';
 
 import { SDK_VERSION, ZPL_SDK_CLIENT_TYPE } from './meta.js';
@@ -275,10 +278,22 @@ export class ZPLClient {
       );
     }
 
-    // Validate samples
-    if (!Number.isInteger(samples) || samples < 1 || samples > 1000000) {
+    // Validate samples.
+    //
+    // AUDIT 2026-08-01: this accepted 1 to 1,000,000. The engine accepts
+    // neither end of that: it does `samples.unwrap_or(1000).clamp(100, 50_000)`
+    // and returns the clamped number without comment. So `samples: 5` ran 100
+    // and `samples: 200_000` ran 50,000, in both cases silently, while the
+    // caller's own record said otherwise — and a sample count is the lever
+    // that decides how much work was paid for. The MCP tool schema and the
+    // site's /api/compute both enforce 100..50000 and refuse outside it; this
+    // is the same rule, so the three clients agree and nobody is told a number
+    // ran that did not.
+    if (!Number.isInteger(samples) || samples < 100 || samples > 50000) {
       throw new ZPLValidationError(
-        'Samples must be an integer between 1 and 1,000,000'
+        'Samples must be an integer between 100 and 50,000 — the engine clamps ' +
+          'anything outside that range and reports the clamped value, so a request ' +
+          'outside it would not run what you asked for.'
       );
     }
 
@@ -324,10 +339,21 @@ export class ZPLClient {
     );
 
     const core = normalizeEngineComputeResult(raw);
+    // AUDIT 2026-08-01: both derived fields were computed from thresholds the
+    // engine does not use (`ain >= 0.7` for isNeutral, 0.8/0.7/0.5/0.3 for
+    // biasLevel), so one result object could report `ainStatus:
+    // 'MODERATE_BIAS'`, `isNeutral: true` and `biasLevel: 'low'` at once. They
+    // now come from `ain_status` when the engine sent it — it is the engine's
+    // own verdict on this reading — and from the engine's boundaries when it
+    // did not. Deriving both from the same source is what keeps them from
+    // disagreeing at a band edge.
     const result: ComputeResult = {
       ...core,
-      isNeutral: core.ain >= 0.7,
-      biasLevel: this._ainToBiasLevel(core.ain),
+      isNeutral: isNeutralReading(core.ain, core.ainStatus),
+      biasLevel:
+        core.ainStatus !== undefined
+          ? ainStatusToBiasLevel(core.ainStatus)
+          : ainToBiasLevel(core.ain),
     };
 
     return result;
@@ -534,6 +560,7 @@ export class ZPLClient {
         total_available_this_cycle: number;
         percent_used: number;
         source?: string;
+        engine_unreachable?: boolean;
       };
       limits?: { max_d: number; max_keys: number };
     };
@@ -563,6 +590,19 @@ export class ZPLClient {
       const data = (await res.json()) as UserMeResponse;
 
       // Map ZPL Main /api/user/me → SDK Usage interface.
+      //
+      // AUDIT 2026-08-01: `tokens.source` was declared in the response type
+      // above and then dropped on the floor here, so the SDK reported an
+      // unmeasured zero exactly as it reported a measured one. The server
+      // added the field precisely because it cannot always read the engine,
+      // and the CLI already branches on it in `whoami` and `quota`.
+      //
+      // `usageMeasured` whitelists the single value that means "read from the
+      // engine" rather than blacklisting today's two failure values. A source
+      // added on the server later then reads as not-measured until someone
+      // decides otherwise, which is the safe direction — the CLI was tightened
+      // the same way and for the same reason.
+      const source = data.tokens.source;
       const usage: Usage = {
         plan: data.user.plan,
         // Engine "usage" semantically = monthly_quota − remaining, but we
@@ -573,6 +613,9 @@ export class ZPLClient {
         bonusBalance: data.tokens.bonus_balance,
         percentUsed: data.tokens.percent_used,
         maxDimension: data.limits?.max_d,
+        source,
+        usageMeasured: source === 'engine_log',
+        engineUnreachable: data.tokens.engine_unreachable === true,
         retrievedAt: new Date(),
       };
       return usage;
@@ -582,34 +625,82 @@ export class ZPLClient {
   }
 
   /**
-   * Get available plans and pricing
+   * Get available plans and pricing.
+   *
+   * AUDIT 2026-08-01: this fetched into `{plans: any[]}` and returned the
+   * array unchanged while claiming it was `Plan[]`. The `any` hid the fact
+   * that the engine sends `{name, max_d, tokens_per_month, max_keys,
+   * price_usd, unlimited}` and the declared type promised `id`, `price`,
+   * `dailyLimit`, `monthlyLimit` and `features` — so every field but `name`
+   * was undefined at runtime and the README's `plan.features.join(', ')`
+   * threw. The engine's fields are now mapped explicitly, which also means a
+   * future rename on the wire fails here rather than silently downstream.
    *
    * @param timeout - Optional timeout override
    * @returns PlansResponse with all available plans
    * @throws {ZPLError} on API error
    */
   async getPlans(timeout?: number): Promise<PlansResponse> {
-    const response = await this._request<{ plans: any[] }>(
-      '/plans',
-      { method: 'GET' },
-      { timeout }
-    );
+    const response = await this._request<{
+      plans?: Array<{
+        name?: string;
+        max_d?: number;
+        tokens_per_month?: number;
+        max_keys?: number;
+        price_usd?: number;
+        unlimited?: boolean;
+      }>;
+    }>('/plans', { method: 'GET' }, { timeout });
+
+    const num = (v: unknown): number =>
+      typeof v === 'number' && Number.isFinite(v) ? v : 0;
 
     return {
-      plans: response.plans,
+      plans: (response.plans ?? []).map((p) => ({
+        name: typeof p.name === 'string' ? p.name : '',
+        maxDimension: num(p.max_d),
+        tokensPerMonth: num(p.tokens_per_month),
+        maxKeys: num(p.max_keys),
+        priceUsd: num(p.price_usd),
+        unlimited: p.unlimited === true,
+      })),
       fetchedAt: new Date(),
     };
   }
 
   /**
-   * Check API health and status
+   * Check API health and status.
+   *
+   * AUDIT 2026-08-01: this cast the raw body to `HealthResponse`, a type that
+   * described `status: 'healthy' | 'degraded' | 'unhealthy'`, `uptime` and
+   * `timestamp`. The engine sends `{status: "ok", version, uptime_seconds}`,
+   * so the comparison every caller writes first — `status === 'healthy'` —
+   * was permanently false and `uptime` was permanently undefined. Mapped from
+   * the real body instead.
+   *
+   * `uptimeSeconds` is left undefined when the engine does not send it rather
+   * than defaulted to 0, because 0 is a meaningful reading: a process that
+   * started this second.
    *
    * @param timeout - Optional timeout override
    * @returns HealthResponse with service status
    * @throws {ZPLError} on API error
    */
   async getHealth(timeout?: number): Promise<HealthResponse> {
-    return this._request<HealthResponse>('/health', { method: 'GET' }, { timeout });
+    const raw = await this._request<{
+      status?: string;
+      version?: string;
+      uptime_seconds?: number;
+    }>('/health', { method: 'GET' }, { timeout });
+
+    const health: HealthResponse = {
+      status: typeof raw.status === 'string' ? raw.status : 'unknown',
+      version: typeof raw.version === 'string' ? raw.version : '',
+    };
+    if (typeof raw.uptime_seconds === 'number' && Number.isFinite(raw.uptime_seconds)) {
+      health.uptimeSeconds = raw.uptime_seconds;
+    }
+    return health;
   }
 
   /**
@@ -789,25 +880,39 @@ export class ZPLClient {
     }
   }
 
-  /**
-   * Convert AIN score to bias level
-   */
-  private _ainToBiasLevel(
-    ain: number
-  ): 'none' | 'low' | 'moderate' | 'high' | 'critical' {
-    if (ain >= 0.8) return 'none';
-    if (ain >= 0.7) return 'low';
-    if (ain >= 0.5) return 'moderate';
-    if (ain >= 0.3) return 'high';
-    return 'critical';
-  }
+  // AUDIT 2026-08-01: a private `_ainToBiasLevel` lived here with its own copy
+  // of the thresholds, duplicating the exported `ainToBiasLevel` in utils.ts.
+  // When the bands were realigned to the engine on 2026-07-31 only the
+  // interpretation helper was updated, and this copy — the one that actually
+  // populated every ComputeResult — kept the old numbers. Removed rather than
+  // corrected: two copies of a threshold is how they drift apart.
 }
 
 /**
- * Check if an error is retryable
+ * Check if an error is retryable.
+ *
+ * AUDIT 2026-08-01: `ZPLTimeoutError` was in this list, so a request that hit
+ * the deadline was re-sent up to three more times. The engine deducts tokens
+ * before it starts computing, so by the time the client's deadline fires the
+ * call has already been charged and may still be running — every retry buys
+ * the same work again. One user call became four billed ones.
+ *
+ * That is the same reasoning the CLI and the MCP were fixed with on the same
+ * day (`api-client.ts`, `engine-client.ts`): an abort is terminal. The raised
+ * default deadline now sits past the engine's own 60s ceiling, so a genuine
+ * overrun comes back as the engine's 504 — which refunds — instead of as a
+ * client-side abort. A deadline reached after that is a fact about this call,
+ * not a transient the next attempt could fix.
+ *
+ * Network errors stay retryable: those fail before the engine answers, and the
+ * common case is a connection that never carried the request at all.
  */
 function isRetryableError(error: unknown): boolean {
-  if (error instanceof ZPLTimeoutError || error instanceof ZPLNetworkError) {
+  if (error instanceof ZPLTimeoutError) {
+    return false;
+  }
+
+  if (error instanceof ZPLNetworkError) {
     return true;
   }
 

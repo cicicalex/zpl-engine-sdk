@@ -1,5 +1,12 @@
 """Data models for ZPL Engine SDK."""
 
+# AUDIT 2026-08-01: required for the `X | Y` annotations below.
+# pyproject declares requires-python = ">=3.9" and classifies 3.9, but PEP 604
+# unions are only evaluable at runtime from 3.10. Every use in this package is in
+# annotation position (checked with ast: 27 in annotations, 0 outside), so making
+# annotations lazy keeps the declared floor honest instead of narrowing support.
+from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import Literal, Optional
 from datetime import datetime
@@ -35,24 +42,67 @@ StabilityStatusType = Literal[
 # points at the `ain_status` band enum, which is what most callers meant.
 AIStatusType = AINStatusType
 
+# A five-label view of the engine's six `ain_status` bands. Six into five needs
+# exactly one merge, and it is made at the top - between the two strongest
+# neutral bands - where the distinction is how neutral a reading is rather than
+# how biased:
+#
+#   none      CERTIFIED_NEUTRAL (>= 0.96) + HIGHLY_NEUTRAL (>= 0.90)
+#   low       NEUTRAL           (>= 0.80)
+#   moderate  MODERATE_BIAS     (>= 0.60)
+#   high      SIGNIFICANT_BIAS  (>= 0.40)
+#   critical  HIGH_BIAS         (<  0.40)
+#
+# Every boundary is an engine boundary; none was chosen here. The split that
+# matters - between the labels meaning "not biased" (none, low) and those
+# meaning "biased" (moderate, high, critical) - is the engine's own NEUTRAL
+# floor of 0.80, so this scale cannot contradict `ain_status`.
 BiasLevel = Literal["none", "low", "moderate", "high", "critical"]
+
+_AIN_STATUS_TO_BIAS_LEVEL: dict[str, BiasLevel] = {
+    "CERTIFIED_NEUTRAL": "none",
+    "HIGHLY_NEUTRAL": "none",
+    "NEUTRAL": "low",
+    "MODERATE_BIAS": "moderate",
+    "SIGNIFICANT_BIAS": "high",
+    "HIGH_BIAS": "critical",
+}
 
 
 def ain_to_bias_level(ain: float) -> BiasLevel:
-    """Convert AIN score (float 0.0-1.0) into a bias-level classification.
+    """Convert an AIN score (float 0.0-1.0) into a bias-level classification.
 
-    Mirrors `ainToBiasLevel` in the TypeScript SDK so users get the same
-    label whichever language they choose.
+    AUDIT 2026-08-01: the bands were 0.8 / 0.7 / 0.5 / 0.3, none of them an
+    edge the engine recognises. The 2026-07-31 pass aligned ``interpret_ain``
+    to the engine's six bands and left this function - the one that populates
+    ``ComputeResult.bias_level`` - on the old scale. At ain 0.75 the engine
+    says MODERATE_BIAS and this said "low", the label for a reading with
+    almost no bias, so one result object disagreed with itself.
+
+    The boundaries below are the engine's own, from crates/zpl-core/src/ain.rs.
+    Mirrors ``ainToBiasLevel`` in the TypeScript SDK so the same reading gets
+    the same label whichever language a team uses.
     """
-    if ain >= 0.8:
+    if ain >= 0.90:
         return "none"
-    if ain >= 0.7:
+    if ain >= 0.80:
         return "low"
-    if ain >= 0.5:
+    if ain >= 0.60:
         return "moderate"
-    if ain >= 0.3:
+    if ain >= 0.40:
         return "high"
     return "critical"
+
+
+def bias_level_from_ain_status(ain_status: str) -> BiasLevel | None:
+    """Bias level for an ``ain_status`` band, or None if the band is unknown.
+
+    Preferred over :func:`ain_to_bias_level` whenever the engine sent a band:
+    the band IS the engine's classification of that reading, so deriving from
+    it cannot land on the far side of a boundary the way re-deriving from the
+    float can.
+    """
+    return _AIN_STATUS_TO_BIAS_LEVEL.get(ain_status)
 
 
 @dataclass
@@ -119,16 +169,33 @@ class ComputeResult:
     ain_status: AINStatusType | None = None
     compute_ms: float | None = None
 
-    def is_neutral(self, threshold: float = 0.7) -> bool:
-        """Check if result is considered neutral.
+    def is_neutral(self, threshold: float | None = None) -> bool:
+        """Check whether the engine considers this reading neutral.
+
+        AUDIT 2026-08-01: the default threshold was 0.7, which sits inside the
+        engine's MODERATE_BIAS band (0.60-0.80). Every reading between 0.70 and
+        0.80 was called neutral here and biased by the engine that produced it,
+        in the same object - ``ain_status`` said MODERATE_BIAS while
+        ``is_neutral()`` said True.
+
+        With no threshold the engine decides: its own band when it sent one
+        (the three neutral bands are those without BIAS in the name), its
+        NEUTRAL floor of 0.80 when it did not. Passing a threshold explicitly
+        still compares against ``ain`` and is unchanged - a caller who has
+        decided 0.65 is neutral enough for their own purpose is answering a
+        different question and is left alone.
 
         Args:
-            threshold: AIN threshold (default 0.7)
+            threshold: optional AIN threshold. Omit to use the engine's verdict.
 
         Returns:
-            True if ain >= threshold
+            True if the reading is neutral by whichever rule applies.
         """
-        return self.ain >= threshold
+        if threshold is not None:
+            return self.ain >= threshold
+        if self.ain_status is not None:
+            return "BIAS" not in self.ain_status
+        return self.ain >= 0.80
 
     def is_stable(self) -> bool:
         """Check if the stability regime indicates stability.
@@ -156,11 +223,20 @@ class ComputeResult:
 
     @property
     def bias_level(self) -> BiasLevel:
-        """Bias-level classification derived from `ain`.
+        """Bias-level classification for this reading.
+
+        Taken from ``ain_status`` when the engine sent a band, since that is
+        the engine's own verdict, and from ``ain`` on the engine's boundaries
+        when it did not. Deriving this and ``is_neutral()`` from the same
+        source is what stops them disagreeing at a band edge.
 
         Mirrors `biasLevel` on the TypeScript ComputeResult so cross-language
         code can switch on the same set of labels.
         """
+        if self.ain_status is not None:
+            from_band = bias_level_from_ain_status(self.ain_status)
+            if from_band is not None:
+                return from_band
         return ain_to_bias_level(self.ain)
 
     def __str__(self) -> str:
@@ -267,6 +343,27 @@ class UsageInfo:
         reset_date: When the token limit resets
         requests_made: Number of API requests made
         last_reset: When tokens were last reset
+        source: How the server obtained ``tokens_used`` - see below.
+        engine_unreachable: The server could not reach the engine database
+            while answering, so the figures may be up to an hour stale.
+
+    AUDIT 2026-08-01: ``source`` was on the wire and this SDK never read it.
+    ZPL Main added the field because three different server-side failures all
+    produce ``used_this_month: 0``, which is also what a genuinely idle account
+    produces. Measured on production: 200 tokens were spent on the engine and
+    the endpoint reported 0 used, before and after, with no way to tell from
+    outside. Only ``"engine_log"`` means the number was read from the engine's
+    usage log; ``"engine_user_not_found"`` means the two databases disagree
+    about who this account is, and ``"user_table_fallback"`` means the engine
+    could not be reached.
+
+    Enforcement does not go through this endpoint - the engine deducts
+    atomically on every request - so an unmeasured zero is not cosmetic. It is
+    the only warning anyone gets before being refused. Read
+    :attr:`usage_measured` rather than comparing the string: it whitelists the
+    one value that means "measured", so a source added on the server later
+    reads as not-measured until someone decides otherwise. The CLI's ``whoami``
+    and ``quota`` were tightened the same way.
     """
 
     plan: str
@@ -276,10 +373,26 @@ class UsageInfo:
     reset_date: datetime | str
     requests_made: int
     last_reset: datetime | str
+    source: str | None = None
+    engine_unreachable: bool = False
+
+    @property
+    def usage_measured(self) -> bool:
+        """True only when the server actually read usage from the engine.
+
+        When False, ``tokens_used``, ``tokens_remaining`` and
+        ``usage_percent`` are the only figures the server had, not the right
+        ones. Display them as unknown.
+        """
+        return self.source == "engine_log"
 
     @property
     def usage_percent(self) -> float:
-        """Get usage as percentage (0-100)."""
+        """Get usage as percentage (0-100).
+
+        Meaningful only when :attr:`usage_measured` is True; it is computed
+        from ``tokens_used``, which the server may not have been able to read.
+        """
         if self.tokens_limit == 0:
             return 0.0
         return (self.tokens_used / self.tokens_limit) * 100
@@ -290,6 +403,15 @@ class UsageInfo:
         return self.tokens_limit == 0 or self.tokens_limit < 0
 
     def __str__(self) -> str:
+        # A figure the server could not stand behind must not be printed as a
+        # measurement. The plan's allowance is a property of the plan rather
+        # than a reading, so it stays visible either way.
+        if not self.usage_measured:
+            why = self.source or "not reported"
+            return (
+                f"UsageInfo(plan={self.plan}, usage unknown "
+                f"(source={why}), quota {self.tokens_limit})"
+            )
         if self.is_unlimited:
             return f"UsageInfo(plan={self.plan}, unlimited, {self.requests_made} requests)"
         return f"UsageInfo(plan={self.plan}, {self.usage_percent:.1f}% used, {self.tokens_remaining} left)"
@@ -297,85 +419,98 @@ class UsageInfo:
 
 @dataclass
 class PlanInfo:
-    """Information about a pricing plan.
+    """One plan, exactly as ``GET /plans`` returns it.
+
+    AUDIT 2026-08-01: this carried ``price_eur`` and ``features``, neither of
+    which the engine has ever sent. Both were read with ``.get(..., default)``
+    from a payload that never carries the key, so ``features`` was always ``[]``
+    and ``price_eur`` always 0.0 - which ``__str__`` then printed as
+    "Basic (EUR 0.00/mo)" for a plan that costs 10 USD. Wrong currency and
+    wrong number in one line. No EUR pricing exists anywhere in the system:
+    not in the engine plan table, not in the website constants, not in this
+    response, and Stripe charges USD. The same fabricated column was removed
+    from the PyPI landing page on 2026-07-31 and is pinned by a test.
+
+    Meanwhile ``max_d`` and ``max_keys`` - which the engine does send, and
+    which decide what a plan actually lets you do - were dropped on the floor.
+    The fields below are the engine's, and only the engine's.
 
     Attributes:
-        name: Plan name (Free, Basic, Pro, GamePro, Studio, Agent, Enterprise, XL)
+        name: Plan name (Free, Basic, Pro, GamePro, Studio, Agent, Enterprise,
+            Enterprise XL)
         tokens_per_month: Monthly token allowance
-        price_usd: Monthly price in USD
-        price_eur: Monthly price in EUR
-        features: List of features included
+        max_d: Largest matrix dimension this plan may send
+        max_keys: Simultaneously active API keys this plan may hold
+        price_usd: Monthly price in USD - the only currency in the system
+        unlimited: The engine's ``unlimited`` flag. NOT an absence of a cap:
+            the engine sets it for any plan at or above 50,000,000 tokens per
+            month, which today is Enterprise XL alone - and 50,000,000 is
+            precisely the ceiling that plan is metered against.
+            ``tokens_per_month`` is the number that is enforced.
     """
 
     name: str
     tokens_per_month: int
     price_usd: float
-    price_eur: float
-    features: list[str]
+    max_d: int = 0
+    max_keys: int = 0
+    unlimited: bool = False
 
     def is_free(self) -> bool:
         """Check if this is the free plan."""
-        return self.price_usd == 0 and self.price_eur == 0
+        return self.price_usd == 0
 
     def __str__(self) -> str:
         if self.is_free():
             return f"{self.name} (Free, {self.tokens_per_month:,} tokens/mo)"
-        return f"{self.name} (€{self.price_eur:.2f}/mo, {self.tokens_per_month:,} tokens)"
+        return f"{self.name} (${self.price_usd:.2f}/mo, {self.tokens_per_month:,} tokens)"
 
 
 @dataclass
 class HealthStatus:
-    """Engine health status.
+    """Engine health, exactly as ``GET /health`` returns it.
 
-    All metric fields are Optional because the engine `/health` endpoint
-    currently returns only `{status, version}` — the latency/uptime/RPS
-    metrics are not yet exposed. Pre-v2.0.1 the SDK defaulted these to 0
-    which rendered as "0.00% uptime, 0ms" in `__str__`, falsely implying
-    the engine was offline. Now we display "n/a" for unknown fields.
+    AUDIT 2026-08-01: this declared ``uptime_percent``, ``response_time_ms``,
+    ``requests_per_second``, ``error_rate_percent`` and ``last_check``. The
+    engine's health handler returns ``{status, version, uptime_seconds}`` and
+    has never measured any of the five, so all of them were permanently None -
+    and the README's own quickstart line, ``f"Uptime:
+    {health.uptime_percent:.2f}%"``, raised TypeError on None for anyone who
+    copied it. Keeping fields that can only ever be None does not make them
+    optional metrics, it makes them a promise the engine never made, so they
+    are gone and the one number the engine does report has taken their place.
 
     Attributes:
-        status: Overall status (ok / up / degraded / down).
-        version: Engine API version (e.g. "3.1.0").
-        uptime_percent: Uptime percentage (0-100) when reported, else None.
-        response_time_ms: Average response time in ms when reported.
-        requests_per_second: Current RPS when reported.
-        error_rate_percent: Error rate percentage when reported.
-        last_check: ISO timestamp of last health check when reported.
+        status: The engine sends the literal ``"ok"`` and has no other value -
+            the handler builds it from a constant, so there is no degraded or
+            down reading to branch on. A ``get_health()`` call that returns at
+            all is the signal that the engine answered.
+        version: Engine version (its own ``CARGO_PKG_VERSION``).
+        uptime_seconds: Seconds since the engine process started. ``None``
+            when the engine did not send it, never 0 - zero would mean the
+            process restarted this second, which is a real and very different
+            reading.
     """
 
     status: str
     version: str = ""
-    uptime_percent: float | None = None
-    response_time_ms: float | None = None
-    requests_per_second: float | None = None
-    error_rate_percent: float | None = None
-    last_check: datetime | str | None = None
+    uptime_seconds: int | None = None
 
     def is_healthy(self) -> bool:
-        """Check if engine is healthy.
+        """Check if the engine answered and reported itself up.
 
-        Returns:
-            True if status is "up"/"ok" and uptime is either None (not
-            reported) OR >= 99%. Returning True on None preserves the
-            sensible default that "no metric = no problem" for an engine
-            that hasn't shipped metrics yet.
+        "ok" is what today's engine sends; "up" is accepted as well so a
+        deployment that relabels it does not read as an outage. There is no
+        uptime figure to threshold against - the endpoint reports how long the
+        process has been running, not what fraction of the time it was up.
         """
-        if self.status not in ("up", "ok"):
-            return False
-        if self.uptime_percent is None:
-            return True
-        return self.uptime_percent >= 99.0
+        return self.status in ("up", "ok")
 
     def __str__(self) -> str:
         uptime = (
-            f"{self.uptime_percent:.2f}% uptime"
-            if self.uptime_percent is not None
+            f"up {self.uptime_seconds}s"
+            if self.uptime_seconds is not None
             else "uptime n/a"
         )
-        latency = (
-            f"{self.response_time_ms:.0f}ms"
-            if self.response_time_ms is not None
-            else "latency n/a"
-        )
         ver = f", v{self.version}" if self.version else ""
-        return f"HealthStatus({self.status}{ver}, {uptime}, {latency})"
+        return f"HealthStatus({self.status}{ver}, {uptime})"

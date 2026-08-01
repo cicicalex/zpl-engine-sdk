@@ -42,10 +42,17 @@ You must obtain a key first, by ONE of these three paths:
 1. Visit **<https://zeropointlogic.io/auth/register>** and create an
    account. Free plan = 5,000 tokens/month, no credit card.
 2. Verify your email by clicking the link we send.
-3. Open **<https://zeropointlogic.io/dashboard/api-keys>**, click
-   **Create New Key**, give it a name, hit **Generate**.
-4. **Copy the plaintext key now** — the dashboard shows it once.
-   Format: `zpl_u_` + 48 hex chars (54 chars total).
+3. Sign in. You land on **/dashboard/onboarding**, which creates your first
+   key for you and shows it there — you do not create one yourself.
+4. **Copy the plaintext key from that page.** It is shown once and then
+   wiped. Format: `zpl_u_` + 48 hex chars (54 chars total).
+
+If you navigated away before copying it, **/dashboard/api-keys** shows only
+the prefix, and on Free and Basic the **Create New Key** button is disabled:
+both plans allow exactly **1** active key, and you already have it. Revoke
+the existing key there and create a replacement, or move to Pro (3 keys).
+The API refuses the same way — `403 Key limit reached` — so a script hits
+this too.
 
 ### 2. CLI (local dev)
 
@@ -162,8 +169,10 @@ asyncio.run(main())
 ```python
 from zeropointlogic import ZPLClient, matrix_from_prices
 
-# Convert price series to binary matrix
-prices = [100, 105, 102, 110, 108, 115, 112]
+# Convert price series to binary matrix. matrix_from_prices returns a
+# (len(prices) - window) x window matrix, and compute() requires a square one
+# of at least 3x3 — so pass exactly 2 * window prices. Six at window 3 → 3x3.
+prices = [100, 105, 102, 110, 108, 115]
 matrix = matrix_from_prices(prices, window=3)
 
 client = ZPLClient(api_key="zpl_xxx")
@@ -201,18 +210,24 @@ client = ZPLClient(api_key="zpl_xxx")
 # Get current usage
 usage = client.get_usage()
 print(f"Plan: {usage.plan}")
-print(f"Usage: {usage.usage_percent:.1f}%")
-print(f"Tokens remaining: {usage.tokens_remaining}")
+if usage.usage_measured:
+    print(f"Usage: {usage.usage_percent:.1f}%")
+    print(f"Tokens remaining: {usage.tokens_remaining}")
+else:
+    # The server could not read your usage from the engine and says so.
+    # The numbers it returned are zeros it had to invent, not a reading.
+    print(f"Usage: unknown (source={usage.source})")
 
 # Get available plans
 plans = client.get_plans()
 for plan in plans:
-    print(f"{plan.name}: {plan.tokens_per_month:,} tokens/mo")
+    print(f"{plan.name}: {plan.tokens_per_month:,} tokens/mo, max d={plan.max_d}, ${plan.price_usd:.0f}/mo")
 
 # Check engine health
 health = client.get_health()
-print(f"Status: {health.status}")
-print(f"Uptime: {health.uptime_percent:.2f}%")
+print(f"Status: {health.status}")           # "ok"
+print(f"Engine version: {health.version}")
+print(f"Process uptime: {health.uptime_seconds}s")
 ```
 
 ## Core Concepts
@@ -262,15 +277,25 @@ result.status: StabilityStatusType   # STABLE | ACTIVE | INHIBITED_HIGH | INHIBI
 result.ain_status: AINStatusType     # CERTIFIED_NEUTRAL | HIGHLY_NEUTRAL | NEUTRAL
                                      #   | MODERATE_BIAS | SIGNIFICANT_BIAS | HIGH_BIAS
 result.tokens_used: int             # Tokens consumed
-result.tokens_remaining: int        # Tokens left
+result.tokens_remaining: int        # Tokens left, or None if the engine didn't say
 result.matrix_size: int             # N (for N×N matrix)
-result.samples: int                 # Sample count used
+result.samples: int                 # Sample count the engine actually ran
 
 # Methods
-result.is_neutral(threshold=0.7)    # Check if AIN >= threshold
+result.is_neutral()                 # The engine's own verdict: its ain_status band,
+                                    #   or its NEUTRAL floor of 0.80 if no band was sent
+result.is_neutral(threshold=0.65)   # Or your own threshold, compared against ain
 result.is_stable()                  # Check if status == "STABLE"
 result.has_bias()                   # Check if ain_status is a *_BIAS band
+result.bias_level                   # none | low | moderate | high | critical,
+                                    #   derived from the same band, so it cannot
+                                    #   disagree with ain_status
 ```
+
+`is_neutral()` and `bias_level` both read `ain_status` when the engine sent
+one. The neutral/biased split is the engine's 0.80, not a threshold this SDK
+invented — at AIN 0.75 the engine reports `MODERATE_BIAS`, and so does the
+SDK.
 
 ### UsageInfo
 
@@ -279,15 +304,29 @@ usage = client.get_usage()
 
 usage.plan: str                     # Current plan name
 usage.tokens_used: int              # Tokens used this period
-usage.tokens_limit: int             # Total tokens available
+usage.tokens_limit: int             # Monthly quota for the plan
 usage.tokens_remaining: int         # Tokens left
 usage.usage_percent: float          # Usage as percentage
 usage.is_unlimited: bool            # True if plan is unlimited
-usage.requests_made: int            # API requests made
-usage.reset_date: str               # When tokens reset
+usage.source: str | None            # How the server obtained the usage figure
+usage.usage_measured: bool          # True only when source == "engine_log"
+usage.engine_unreachable: bool      # Server could not reach the engine DB
+usage.requests_made: int            # Always 0 — ZPL Main meters tokens, not requests
+usage.reset_date: str               # Always "" — quota runs on cycles, not a date
 ```
 
+**Check `usage_measured` before showing the numbers.** Three different
+server-side failures produce `tokens_used == 0`, which is also what an idle
+account produces, so the server reports how it got the figure. Only
+`"engine_log"` means it was read from the engine. Your limit is enforced by
+the engine on every request whatever this endpoint managed to read, so an
+unmeasured zero is the only warning you get before a request is refused.
+
 ### PlanInfo
+
+Exactly the fields `GET /plans` returns — there is no EUR price and no
+feature list anywhere in the system, and earlier versions of this SDK
+reported both as `0.00` and `[]`.
 
 ```python
 plans = client.get_plans()
@@ -295,9 +334,11 @@ plan = plans[0]
 
 plan.name: str                      # Plan name
 plan.tokens_per_month: int          # Monthly token allowance
-plan.price_usd: float               # USD price
-plan.price_eur: float               # EUR price
-plan.features: list[str]            # Included features
+plan.price_usd: float               # USD price (the only currency)
+plan.max_d: int                     # Largest matrix dimension the plan may send
+plan.max_keys: int                  # Simultaneously active API keys allowed
+plan.unlimited: bool                # Engine flag for plans at/above 50,000,000
+                                    #   tokens/month — not an absence of a cap
 
 plan.is_free()                      # Check if free tier
 ```
@@ -307,15 +348,16 @@ plan.is_free()                      # Check if free tier
 ```python
 health = client.get_health()
 
-health.status: str                  # "up" | "degraded" | "down"
-health.uptime_percent: float        # Uptime percentage
-health.response_time_ms: float      # Avg response time
-health.requests_per_second: float   # Current RPS
-health.error_rate_percent: float    # Error rate
+health.status: str                  # "ok" — the engine sends no other value
 health.version: str                 # Engine version
+health.uptime_seconds: int | None   # Seconds since the engine process started
 
-health.is_healthy()                 # Check if up and >99% uptime
+health.is_healthy()                 # True when the engine answered and said ok
 ```
+
+The engine reports no latency, request rate, error rate or uptime
+percentage on this endpoint, so this SDK does not offer them. A
+`get_health()` call that returns at all is the availability signal.
 
 ## Utility Functions
 
@@ -330,9 +372,9 @@ from zeropointlogic import (
     create_random_matrix,
 )
 
-# From price series
-prices = [100, 105, 102, 110]
-matrix = matrix_from_prices(prices, window=2)
+# From price series — 2 * window prices gives a square window x window matrix
+prices = [100, 105, 102, 110, 108, 115]
+matrix = matrix_from_prices(prices, window=3)
 
 # From timeseries (with binning)
 values = [1.2, 3.4, 2.1, 4.5, 3.2]
@@ -353,12 +395,16 @@ matrix = create_random_matrix(size=5, density=0.5)
 ### Interpretation
 
 ```python
-from zeropointlogic import interpret_ain, get_status_color
+# get_status_color is not re-exported from the package root — import it from
+# the module. `interpret_ain` is available from either.
+from zeropointlogic import interpret_ain
+from zeropointlogic.utils import get_status_color
 
 # Get human-readable AIN interpretation
-short = interpret_ain(0.75, "short")       # "Excellent"
-medium = interpret_ain(0.75, "medium")    # "Highly Neutral"
-long = interpret_ain(0.75, "long")        # Full explanation
+short = interpret_ain(0.75, "short")      # "Moderate bias"
+medium = interpret_ain(0.75, "medium")    # "Moderate Bias"
+long = interpret_ain(0.75, "long")        # "Moderate bias. A noticeable imbalance
+                                          #   the engine reports as bias, not neutrality."
 
 # Get status color for UI/visualization
 color = get_status_color("STABLE")        # "green"
@@ -367,7 +413,8 @@ color = get_status_color("STABLE")        # "green"
 ### Validation
 
 ```python
-from zeropointlogic import validate_matrix, chunk_matrices
+# Both live in zeropointlogic.utils and are not re-exported from the root.
+from zeropointlogic.utils import validate_matrix, chunk_matrices
 
 # Validate matrix format
 is_valid, error_msg = validate_matrix([[0, 1, 0], [1, 0, 1], [0, 1, 0]])
@@ -430,11 +477,17 @@ client = ZPLClient(
 ```python
 client = ZPLClient(
     api_key="zpl_xxx",
-    timeout=30,              # Request timeout in seconds (default 30)
+    timeout=65,              # Request timeout in seconds (default 65)
     max_retries=3,           # Max retry attempts (default 3)
     backoff_factor=0.5       # Exponential backoff multiplier (default 0.5)
 )
 ```
+
+Keep `timeout` **above** the engine's own ceilings — 30s for `/compute`, 60s
+for `/sweep`. The engine deducts tokens before it computes and refunds only on
+a timeout it issues itself, so a client that gives up first has paid for an
+answer it will never see. For the same reason a request that hits the deadline
+is not retried; `max_retries` covers connection failures.
 
 ## Examples
 
@@ -522,21 +575,30 @@ sends this body:
 `ain` is a float on the 0.0–1.0 scale with 6 decimals. Show it as a
 percentage with `f"{ain * 100:.2f}"`; never `round(ain * 100)`.
 
-### GET /usage
-Get current API usage for authenticated key.
+### Usage — `GET https://zeropointlogic.io/api/user/me`
+Current plan and token usage. This lives on ZPL Main, not on the engine: the
+engine has no usage endpoint, and `get_usage()` calls this one.
 
 **Response:**
 ```json
 {
-  "plan": "pro",
-  "tokens_used": 5000,
-  "tokens_limit": 50000,
-  "tokens_remaining": 45000,
-  "reset_date": "2026-05-06",
-  "requests_made": 150,
-  "last_reset": "2026-04-06"
+  "user": { "email": "you@example.com", "plan": "pro", "plan_name": "Pro" },
+  "tokens": {
+    "remaining": 45000,
+    "used_this_month": 5000,
+    "monthly_quota": 50000,
+    "bonus_balance": 0,
+    "total_available_this_cycle": 50000,
+    "percent_used": 10,
+    "source": "engine_log",
+    "engine_unreachable": false
+  },
+  "limits": { "max_d": 25, "max_keys": 3 }
 }
 ```
+
+`source` is `engine_log` (read from the engine), `engine_user_not_found`, or
+`user_table_fallback`. Only the first means the usage figures are a reading.
 
 ### GET /plans
 Get available pricing plans.
@@ -547,29 +609,30 @@ Get available pricing plans.
   "plans": [
     {
       "name": "Free",
-      "tokens_per_month": 100,
-      "price_usd": 0.0,
-      "price_eur": 0.0,
-      "features": ["API access", "5 requests/min"]
+      "max_d": 9,
+      "tokens_per_month": 5000,
+      "max_keys": 1,
+      "price_usd": 0,
+      "unlimited": false
     }
   ]
 }
 ```
 
 ### GET /health
-Check engine health and performance.
+Check that the engine is answering.
 
 **Response:**
 ```json
 {
-  "status": "up",
-  "uptime_percent": 99.95,
-  "response_time_ms": 45.2,
-  "requests_per_second": 150.5,
-  "error_rate_percent": 0.05,
-  "version": "1.2.3"
+  "status": "ok",
+  "version": "3.2.0",
+  "uptime_seconds": 4212
 }
 ```
+
+`status` is the literal `"ok"`; the endpoint has no other value and reports
+no performance metrics.
 
 ## Authentication
 

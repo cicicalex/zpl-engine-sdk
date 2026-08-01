@@ -35,7 +35,24 @@ export type StabilityStatus =
   | 'INHIBITED_LOW';
 
 /**
- * Bias level classification - derived from AIN value
+ * Bias level classification — a five-label view of the engine's six
+ * {@link AINStatus} bands.
+ *
+ * The engine has six bands and this scale has five labels, so exactly one
+ * merge is needed. It is made at the top, between the two strongest neutral
+ * bands, where the distinction is how neutral a reading is rather than how
+ * biased:
+ *
+ *   none      CERTIFIED_NEUTRAL (>= 0.96) + HIGHLY_NEUTRAL (>= 0.90)
+ *   low       NEUTRAL           (>= 0.80)
+ *   moderate  MODERATE_BIAS     (>= 0.60)
+ *   high      SIGNIFICANT_BIAS  (>= 0.40)
+ *   critical  HIGH_BIAS         (<  0.40)
+ *
+ * Every boundary above is an engine boundary; none was chosen here. The split
+ * that matters — between the labels that mean "not biased" (`none`, `low`) and
+ * those that mean "biased" (`moderate`, `high`, `critical`) — is the engine's
+ * own NEUTRAL floor of 0.80, so this scale cannot contradict `ain_status`.
  */
 export type BiasLevel = 'none' | 'low' | 'moderate' | 'high' | 'critical';
 
@@ -111,10 +128,25 @@ export interface ComputeResult {
    */
   tokensRemaining?: number;
 
-  /** Computed: true if ain >= 0.7 (high neutrality) */
+  /**
+   * Computed client-side: does the engine consider this reading neutral?
+   *
+   * AUDIT 2026-08-01: this was `ain >= 0.7`, below the engine's NEUTRAL floor
+   * of 0.80. At ain 0.75 one object said `ainStatus: 'MODERATE_BIAS'` and
+   * `isNeutral: true` at the same time — the SDK contradicting the engine
+   * inside a single result. Now taken from `ainStatus` when the engine sent a
+   * band, and from the engine's own 0.80 floor when it did not.
+   */
   isNeutral: boolean;
 
-  /** Computed: bias level derived from AIN value */
+  /**
+   * Computed client-side: the AIN band expressed on the five-point bias scale.
+   *
+   * Derived from `ainStatus` when present, otherwise from `ain` using the
+   * engine's boundaries. The neutral/biased split sits at 0.80 in both fields,
+   * so `biasLevel` and `ainStatus` can no longer disagree — see
+   * {@link ainToBiasLevel} for how six engine bands map onto five labels.
+   */
   biasLevel: BiasLevel;
 }
 
@@ -222,31 +254,96 @@ export interface Usage {
   /** Max matrix dimension allowed by the current plan (optional) */
   maxDimension?: number;
 
+  /**
+   * How the server obtained `tokensUsed` — `tokens.source` on the wire.
+   *
+   * AUDIT 2026-08-01: ZPL Main added this field because three different
+   * server-side failures all produce `used_this_month: 0`, and that is also
+   * what a genuinely idle account produces. Measured on production: 200 tokens
+   * were spent on the engine and this endpoint reported 0 used, before and
+   * after. Only `"engine_log"` means the number was actually read from the
+   * engine's usage log. `"engine_user_not_found"` means the two databases
+   * disagree about who this account is; `"user_table_fallback"` means the
+   * engine could not be reached and the figure came from a copy the drift cron
+   * reconciles hourly.
+   *
+   * The SDK parsed this field's sibling fields and dropped this one, so an
+   * unmeasured zero arrived indistinguishable from a measured one. Enforcement
+   * does not go through this path — the engine deducts atomically on every
+   * request — so a wrong zero here is the only warning a caller gets before
+   * being refused.
+   *
+   * Prefer {@link Usage.usageMeasured} over comparing this string yourself: a
+   * value added on the server later must read as *not measured* until someone
+   * decides otherwise, which is how the CLI's `whoami` and `quota` treat it.
+   */
+  source?: string;
+
+  /**
+   * True only when `source === 'engine_log'` — i.e. `tokensUsed`,
+   * `tokensRemaining` and `percentUsed` are readings rather than guesses.
+   *
+   * When false, show them as unknown rather than as numbers. They are still
+   * populated because zero is the only figure the server has, not because it
+   * is the right one.
+   */
+  usageMeasured: boolean;
+
+  /**
+   * The server could not reach the engine database while answering
+   * (`tokens.engine_unreachable`). The numbers may be stale by up to an hour.
+   */
+  engineUnreachable: boolean;
+
   /** When this snapshot was fetched */
   retrievedAt: Date;
 }
 
 /**
- * Available plans and their details
+ * One plan, exactly as `GET /plans` returns it.
+ *
+ * AUDIT 2026-08-01: every field of this interface except `name` described an
+ * API that has never existed. It declared `id`, `price`, `dailyLimit`,
+ * `monthlyLimit` and `features` as required, while the engine's plans handler
+ * serialises `{name, max_d, tokens_per_month, max_keys, price_usd, unlimited}`
+ * and nothing else. `getPlans()` handed the parsed body straight back without
+ * mapping, so at runtime only `name` was ever present: `plan.price` was
+ * `undefined`, and the `plan.features.join(...)` in the README threw a
+ * TypeError on the first line anyone copied out of it.
+ *
+ * The fields below are the engine's, renamed to this SDK's camelCase and
+ * mapped in `getPlans()`. Nothing is invented to fill the gaps: the plans
+ * response carries no daily limit (the engine keeps `tokens_per_day`
+ * internally and does not serialise it) and no feature list at all, so neither
+ * appears here.
  */
 export interface Plan {
-  /** Plan identifier: free, basic, pro, gamepro, studio, agent, enterprise, xl */
-  id: string;
-
-  /** User-friendly name */
+  /** Plan name as the engine spells it: Free, Basic, Pro … Enterprise XL. */
   name: string;
 
-  /** Monthly price in USD */
-  price: number;
+  /** Largest matrix dimension this plan may send (`max_d` on the wire). */
+  maxDimension: number;
 
-  /** Daily token limit */
-  dailyLimit: number;
+  /** Monthly token allowance (`tokens_per_month`). */
+  tokensPerMonth: number;
 
-  /** Monthly token limit */
-  monthlyLimit: number;
+  /** Simultaneously active API keys this plan may hold (`max_keys`). */
+  maxKeys: number;
 
-  /** List of features included */
-  features: string[];
+  /**
+   * Monthly price in USD (`price_usd`). USD is the only currency in the
+   * system — Stripe charges USD and no EUR price exists in the engine plan
+   * table, the site constants, or this response.
+   */
+  priceUsd: number;
+
+  /**
+   * The engine's `unlimited` flag — not an absence of a cap. The engine sets
+   * it for any plan whose `tokens_per_month` is at or above 50,000,000, which
+   * today is Enterprise XL alone, and 50,000,000 is exactly the ceiling that
+   * plan is metered against. `tokensPerMonth` is the number that is enforced.
+   */
+  unlimited: boolean;
 }
 
 /**
@@ -258,23 +355,55 @@ export interface PlansResponse {
 }
 
 /**
- * Health check response from /health endpoint
+ * Health check response from `GET /health`.
+ *
+ * AUDIT 2026-08-01: this declared `status: 'healthy' | 'degraded' |
+ * 'unhealthy'`, `uptime: number` and `timestamp: string`. The engine's health
+ * handler returns `{status: "ok", version, uptime_seconds}` — so
+ * `health.status === 'healthy'` could never be true, `health.uptime` was
+ * always `undefined`, and any arithmetic on it produced NaN. Corrected to
+ * what the endpoint sends.
  */
 export interface HealthResponse {
-  status: 'healthy' | 'degraded' | 'unhealthy';
-  uptime: number;
+  /**
+   * The engine sends the literal string `"ok"` and has no other value: the
+   * handler builds the response from a constant, so there is no degraded or
+   * unhealthy reading to branch on. A successful `getHealth()` call — rather
+   * than the contents of this field — is what tells you the engine answered.
+   */
+  status: string;
+
+  /** Engine version (its own `CARGO_PKG_VERSION`). */
   version: string;
-  timestamp: string;
+
+  /**
+   * Seconds since the engine process started (`uptime_seconds` on the wire).
+   *
+   * Optional because an engine older than this field does not send it, and
+   * absent is not zero — zero would mean the process restarted this second.
+   * There is no uptime *percentage* on this endpoint and no timestamp; the
+   * engine measures neither.
+   */
+  uptimeSeconds?: number;
 }
 
 /**
  * Request options for compute operations
  */
 export interface ComputeOptions {
-  /** Number of samples for statistical analysis (default: 1000) */
+  /**
+   * Number of samples for statistical analysis (default: 1000).
+   *
+   * The engine accepts 100 – 50,000 and silently clamps anything outside that
+   * range, returning the clamped figure. The SDK rejects out-of-range values
+   * rather than letting a caller believe 5 samples or 200,000 samples ran.
+   */
   samples?: number;
 
-  /** Request timeout in milliseconds (default: 30000) */
+  /**
+   * Request timeout in milliseconds (default: 65000 — the engine's 60s sweep
+   * ceiling plus network headroom; see ZPLClientConfig.timeout).
+   */
   timeout?: number;
 
   /** API key override (uses client default if not provided) */
@@ -313,10 +442,24 @@ export interface ZPLClientConfig {
    */
   accountBaseUrl?: string;
 
-  /** Default timeout in milliseconds (default: 30000) */
+  /**
+   * Default timeout in milliseconds (default: 65000).
+   *
+   * Must stay ABOVE the engine's own ceilings — 30s for /compute, 60s for
+   * /sweep — plus headroom for the network. The engine deducts tokens before
+   * it computes and refunds only on a timeout it issues itself, so a client
+   * that gives up first abandons a call the caller has already paid for. A
+   * client that waits gets the engine's 504, which does refund.
+   */
   timeout?: number;
 
-  /** Number of retries for failed requests (default: 3) */
+  /**
+   * Number of retries for failed requests (default: 3).
+   *
+   * Retries cover transport failures and 5xx/429 responses. A request that
+   * hits the deadline is never retried: see the terminal-abort note in
+   * client.ts.
+   */
   retries?: number;
 
   /** Enable debug logging (default: false) */

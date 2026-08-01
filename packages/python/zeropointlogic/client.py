@@ -1,5 +1,12 @@
 """ZPL Engine SDK - Main client implementation."""
 
+# AUDIT 2026-08-01: required for the `X | Y` annotations below.
+# pyproject declares requires-python = ">=3.9" and classifies 3.9, but PEP 604
+# unions are only evaluable at runtime from 3.10. Every use in this package is in
+# annotation position (checked with ast: 27 in annotations, 0 outside), so making
+# annotations lazy keeps the declared floor honest instead of narrowing support.
+from __future__ import annotations
+
 import time
 import json
 import logging
@@ -76,10 +83,97 @@ def _sanitize_base_url(candidate: Optional[str], fallback: str) -> str:
     return fb
 
 
+# AUDIT 2026-08-01: the default deadline was 30 seconds - exactly the engine's
+# own /compute ceiling, and half its /sweep ceiling. A client deadline equal to
+# the server's is a coin flip over which side fires first, and losing it is not
+# free: the engine deducts tokens before it starts computing and refunds only on
+# a timeout it issues itself. A client that gives up first drops the request,
+# the refund path is never reached, and the caller has paid for an answer nobody
+# will ever see. Waiting past the engine turns the same overrun into the
+# engine's own 504, which does refund.
+#
+# The CLI, the MCP and the TypeScript SDK were all raised to these numbers
+# earlier the same day. The Python SDK was the client left out. The values are
+# the engine's ceilings plus headroom for the network, not round numbers - if
+# the engine's ceilings move, these have to move with them.
+#
+# One deadline covers every route because every request goes through one path
+# here, so it takes the slowest ceiling.
+_ENGINE_COMPUTE_CEILING_S = 30
+_ENGINE_SWEEP_CEILING_S = 60
+_NETWORK_HEADROOM_S = 5
+
+
+# The engine's own bounds: `req.samples.unwrap_or(1000).clamp(100, 50_000)`.
+_MIN_SAMPLES = 100
+_MAX_SAMPLES = 50_000
+
+
+def _validate_samples(samples: int) -> None:
+    """Reject sample counts the engine would silently rewrite.
+
+    AUDIT 2026-08-01: the only check here was ``samples < 1``. The engine does
+    not reject an out-of-range count, it clamps it - so ``samples=5`` ran 100
+    and ``samples=200_000`` ran 50,000, both without a word, and the caller's
+    own record said otherwise. A sample count is the lever that decides how
+    much work was done and paid for.
+
+    The MCP tool schema and the website's /api/compute both enforce this same
+    range and refuse outside it. With this the three clients agree, and nobody
+    is told a number ran that did not.
+    """
+    if isinstance(samples, bool) or not isinstance(samples, int):
+        raise ZPLValidationError(
+            f"samples must be an integer, got {type(samples).__name__}"
+        )
+    if samples < _MIN_SAMPLES or samples > _MAX_SAMPLES:
+        raise ZPLValidationError(
+            f"samples must be between {_MIN_SAMPLES} and {_MAX_SAMPLES:,} "
+            f"(got {samples:,}). The engine clamps anything outside that range "
+            f"and reports the clamped value, so this request would not run what "
+            f"you asked for."
+        )
+
+
+def _plan_from_engine_dict(data: dict) -> PlanInfo:
+    """Map one entry of ``GET /plans`` onto :class:`PlanInfo`.
+
+    Shared by the sync and async clients so the two cannot drift; they held
+    two copies of this mapping, and both copies read the same two keys the
+    engine has never sent.
+    """
+    return PlanInfo(
+        name=data.get("name", ""),
+        tokens_per_month=data.get("tokens_per_month", 0),
+        price_usd=data.get("price_usd", 0.0),
+        max_d=data.get("max_d", 0),
+        max_keys=data.get("max_keys", 0),
+        unlimited=bool(data.get("unlimited", False)),
+    )
+
+
+def _health_from_engine_dict(data: dict) -> HealthStatus:
+    """Map ``GET /health`` onto :class:`HealthStatus`.
+
+    ``uptime_seconds`` stays None when absent rather than defaulting to 0:
+    zero would claim the engine process restarted this second.
+    """
+    uptime = data.get("uptime_seconds")
+    return HealthStatus(
+        status=data.get("status", "unknown"),
+        version=data.get("version", ""),
+        uptime_seconds=(
+            int(uptime)
+            if isinstance(uptime, (int, float)) and not isinstance(uptime, bool)
+            else None
+        ),
+    )
+
+
 class BaseZPLClient:
     """Base client with common functionality."""
 
-    DEFAULT_TIMEOUT = 30
+    DEFAULT_TIMEOUT = _ENGINE_SWEEP_CEILING_S + _NETWORK_HEADROOM_S  # 65s
     DEFAULT_RETRIES = 3
     DEFAULT_BACKOFF_FACTOR = 0.5
 
@@ -100,8 +194,13 @@ class BaseZPLClient:
         Args:
             api_key: API key (zpl_xxx format)
             base_url: Base URL for the API (default: production)
-            timeout: Request timeout in seconds
-            max_retries: Maximum number of retries for failed requests
+            timeout: Request timeout in seconds (default 65). Keep it ABOVE
+                the engine's own ceilings - 30s for /compute, 60s for /sweep -
+                plus headroom for the network. Below them the caller pays for
+                computations it then abandons; see the note above this class.
+            max_retries: Maximum number of retries for failed requests. A
+                request that hits the deadline is never retried - see
+                ``_make_request``.
             backoff_factor: Multiplier for exponential backoff (default 0.5)
             x_zpl_client: ADR 0002 ``X-ZPL-Client`` (default: ``sdk-python``).
             x_zpl_client_version: ADR 0002 ``X-ZPL-Client-Version`` (default: package version).
@@ -406,10 +505,32 @@ class ZPLClient(BaseZPLClient):
                 return response_data
 
             except self._requests.exceptions.Timeout as e:
-                logger.warning(f"Request timeout on attempt {attempt + 1}/{self.max_retries}")
-                if attempt == self.max_retries - 1:
-                    raise ZPLNetworkError(f"Request timeout after {self.max_retries} attempts") from e
-                time.sleep(self.backoff_factor * (2 ** attempt))
+                # AUDIT 2026-08-01: this retried, up to max_retries times, and
+                # it was the most expensive thing this loop could re-send. The
+                # engine charges for a call before it starts computing, so once
+                # the deadline fires the tokens are already spent and the
+                # computation may still be running on the other side - a retry
+                # buys the same work again. One user call became three billed
+                # ones, and the caller saw an error either way.
+                #
+                # A timeout is now terminal, matching the CLI and the MCP,
+                # which were fixed the same day for the same reason. With the
+                # deadline raised past the engine's own ceiling, a genuine
+                # overrun arrives as the engine's 504 - which refunds - rather
+                # than as a client-side abort, so reaching this line means
+                # something no repetition will fix.
+                logger.warning(
+                    "Request timed out after %ss - not retried: the engine has "
+                    "already charged for this call and a retry would charge again",
+                    self.timeout,
+                )
+                raise ZPLNetworkError(
+                    f"Request timed out after {self.timeout}s. Not retried: the engine "
+                    f"deducts tokens before computing, so re-sending bills you a second "
+                    f"time for work that may still be running. Lower `samples` or the "
+                    f"matrix dimension, or raise `timeout` above the engine's ceiling "
+                    f"({_ENGINE_COMPUTE_CEILING_S}s for /compute)."
+                ) from e
 
             except self._requests.exceptions.ConnectionError as e:
                 logger.warning(f"Connection error on attempt {attempt + 1}/{self.max_retries}")
@@ -429,7 +550,9 @@ class ZPLClient(BaseZPLClient):
 
         Args:
             matrix: Binary matrix (N×N with only 0/1 values)
-            samples: Number of samples for analysis (default 1000)
+            samples: Number of samples for analysis (default 1000). The engine
+                accepts 100-50,000 and silently clamps anything outside that
+                range, so values outside it are rejected here.
 
         Returns:
             ComputeResult with AIN score and analysis
@@ -442,8 +565,7 @@ class ZPLClient(BaseZPLClient):
         """
         self._validate_matrix(matrix)
 
-        if samples < 1:
-            raise ZPLValidationError("samples must be >= 1")
+        _validate_samples(samples)
 
         # v2.0 — convert (matrix, samples) to engine wire shape (d, bias, samples).
         # v1.x sent {matrix, samples} which Rust engine never accepted: every
@@ -557,6 +679,16 @@ class ZPLClient(BaseZPLClient):
         data = r.json()
 
         # Map ZPL Main /api/user/me → SDK UsageInfo dataclass.
+        #
+        # AUDIT 2026-08-01: `tokens.source` was never read. The server reports
+        # it because three different failures on its side all produce
+        # `used_this_month: 0`, which is also what an idle account produces -
+        # so without it an unmeasured zero arrived looking exactly like a
+        # measured one. Enforcement runs on the engine regardless of what this
+        # endpoint managed to read, which makes a wrong zero the only warning
+        # anyone gets before being refused. `UsageInfo.usage_measured`
+        # whitelists the single value that means "read from the engine"; see
+        # the note on that dataclass.
         tokens = data.get("tokens", {})
         return UsageInfo(
             plan=data.get("user", {}).get("plan", "unknown"),
@@ -566,55 +698,46 @@ class ZPLClient(BaseZPLClient):
             reset_date="",  # legacy field; ZPL Main computes via cycles, not absolute dates
             requests_made=0,  # ZPL Main aggregates by tokens, not raw request count
             last_reset="",
+            source=tokens.get("source"),
+            engine_unreachable=bool(tokens.get("engine_unreachable", False)),
         )
 
     def get_plans(self) -> list[PlanInfo]:
         """Get available pricing plans.
 
+        AUDIT 2026-08-01: this read `price_eur` and `features` out of the
+        response. The engine sends neither - it sends `{name, max_d,
+        tokens_per_month, max_keys, price_usd, unlimited}` - so both defaults
+        fired on every plan, every time, and the dataclass then printed a
+        fabricated EUR price. It also discarded `max_d` and `max_keys`, the two
+        fields that say what a plan actually permits. Now mapped to what the
+        endpoint returns.
+
         Returns:
-            List of PlanInfo with pricing and features
+            List of PlanInfo, one per plan the engine publishes
 
         Raises:
             ZPLNetworkError: On connection errors
         """
         response = self._make_request("GET", "/plans")
-
-        plans = []
-        for plan_data in response.get("plans", []):
-            plan = PlanInfo(
-                name=plan_data.get("name", ""),
-                tokens_per_month=plan_data.get("tokens_per_month", 0),
-                price_usd=plan_data.get("price_usd", 0.0),
-                price_eur=plan_data.get("price_eur", 0.0),
-                features=plan_data.get("features", []),
-            )
-            plans.append(plan)
-
-        return plans
+        return [_plan_from_engine_dict(p) for p in response.get("plans", [])]
 
     def get_health(self) -> HealthStatus:
         """Check engine health status.
 
+        AUDIT 2026-08-01: this read four metrics the engine has never sent
+        (`uptime_percent`, `response_time_ms`, `requests_per_second`,
+        `error_rate_percent`) and ignored the one it does (`uptime_seconds`).
+        See HealthStatus for what /health actually returns.
+
         Returns:
-            HealthStatus with uptime and performance metrics
+            HealthStatus with the engine's status, version and process uptime
 
         Raises:
             ZPLNetworkError: On connection errors
         """
         response = self._make_request("GET", "/health")
-
-        # v2.0.1 — pass `None` (not 0.0) for metrics the engine doesn't
-        # report so __str__ shows "uptime n/a" instead of the misleading
-        # "0.00% uptime, 0ms".
-        return HealthStatus(
-            status=response.get("status", "unknown"),
-            version=response.get("version", ""),
-            uptime_percent=response.get("uptime_percent"),
-            response_time_ms=response.get("response_time_ms"),
-            requests_per_second=response.get("requests_per_second"),
-            error_rate_percent=response.get("error_rate_percent"),
-            last_check=response.get("last_check"),
-        )
+        return _health_from_engine_dict(response)
 
     def __enter__(self):
         """Context manager entry."""
@@ -701,10 +824,22 @@ class AsyncZPLClient(BaseZPLClient):
                 return response_data
 
             except self._httpx.TimeoutException as e:
-                logger.warning(f"Request timeout on attempt {attempt + 1}/{self.max_retries}")
-                if attempt == self.max_retries - 1:
-                    raise ZPLNetworkError(f"Request timeout after {self.max_retries} attempts") from e
-                await self._sleep(self.backoff_factor * (2 ** attempt))
+                # AUDIT 2026-08-01: terminal for the same reason as the sync
+                # client above - the engine has already deducted the tokens by
+                # the time this fires, so a retry pays for the same computation
+                # twice. See the note in ZPLClient._make_request.
+                logger.warning(
+                    "Request timed out after %ss - not retried: the engine has "
+                    "already charged for this call and a retry would charge again",
+                    self.timeout,
+                )
+                raise ZPLNetworkError(
+                    f"Request timed out after {self.timeout}s. Not retried: the engine "
+                    f"deducts tokens before computing, so re-sending bills you a second "
+                    f"time for work that may still be running. Lower `samples` or the "
+                    f"matrix dimension, or raise `timeout` above the engine's ceiling "
+                    f"({_ENGINE_COMPUTE_CEILING_S}s for /compute)."
+                ) from e
 
             except self._httpx.ConnectError as e:
                 logger.warning(f"Connection error on attempt {attempt + 1}/{self.max_retries}")
@@ -730,7 +865,9 @@ class AsyncZPLClient(BaseZPLClient):
 
         Args:
             matrix: Binary matrix (N×N with only 0/1 values)
-            samples: Number of samples for analysis (default 1000)
+            samples: Number of samples for analysis (default 1000). The engine
+                accepts 100-50,000 and silently clamps anything outside that
+                range, so values outside it are rejected here.
 
         Returns:
             ComputeResult with AIN score and analysis
@@ -743,8 +880,7 @@ class AsyncZPLClient(BaseZPLClient):
         """
         self._validate_matrix(matrix)
 
-        if samples < 1:
-            raise ZPLValidationError("samples must be >= 1")
+        _validate_samples(samples)
 
         # v2.0 — see sync compute() above. Engine expects {d, bias, samples}.
         d = len(matrix)
@@ -848,6 +984,8 @@ class AsyncZPLClient(BaseZPLClient):
             self._handle_error_response(r.status_code, {}, r.text or "")
         data = r.json()
 
+        # See the sync counterpart for why `source` and `engine_unreachable`
+        # are read: an unmeasured zero must not be reported as measured usage.
         tokens = data.get("tokens", {})
         return UsageInfo(
             plan=data.get("user", {}).get("plan", "unknown"),
@@ -857,53 +995,39 @@ class AsyncZPLClient(BaseZPLClient):
             reset_date="",
             requests_made=0,
             last_reset="",
+            source=tokens.get("source"),
+            engine_unreachable=bool(tokens.get("engine_unreachable", False)),
         )
 
     async def get_plans(self) -> list[PlanInfo]:
         """Get available pricing plans (async).
 
+        See the sync counterpart: the response carries no EUR price and no
+        feature list, and does carry max_d / max_keys.
+
         Returns:
-            List of PlanInfo with pricing and features
+            List of PlanInfo, one per plan the engine publishes
 
         Raises:
             ZPLNetworkError: On connection errors
         """
         response = await self._make_request("GET", "/plans")
-
-        plans = []
-        for plan_data in response.get("plans", []):
-            plan = PlanInfo(
-                name=plan_data.get("name", ""),
-                tokens_per_month=plan_data.get("tokens_per_month", 0),
-                price_usd=plan_data.get("price_usd", 0.0),
-                price_eur=plan_data.get("price_eur", 0.0),
-                features=plan_data.get("features", []),
-            )
-            plans.append(plan)
-
-        return plans
+        return [_plan_from_engine_dict(p) for p in response.get("plans", [])]
 
     async def get_health(self) -> HealthStatus:
         """Check engine health status (async).
 
+        See the sync counterpart: /health returns status, version and
+        uptime_seconds, and no performance metrics.
+
         Returns:
-            HealthStatus with uptime and performance metrics
+            HealthStatus with the engine's status, version and process uptime
 
         Raises:
             ZPLNetworkError: On connection errors
         """
         response = await self._make_request("GET", "/health")
-
-        # See sync get_health above for the rationale on `None` defaults.
-        return HealthStatus(
-            status=response.get("status", "unknown"),
-            version=response.get("version", ""),
-            uptime_percent=response.get("uptime_percent"),
-            response_time_ms=response.get("response_time_ms"),
-            requests_per_second=response.get("requests_per_second"),
-            error_rate_percent=response.get("error_rate_percent"),
-            last_check=response.get("last_check"),
-        )
+        return _health_from_engine_dict(response)
 
     async def close(self) -> None:
         """Close the async client."""

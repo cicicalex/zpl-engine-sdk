@@ -1,5 +1,12 @@
 """Utility functions for ZPL Engine SDK."""
 
+# AUDIT 2026-08-01: required for the `X | Y` annotations below.
+# pyproject declares requires-python = ">=3.9" and classifies 3.9, but PEP 604
+# unions are only evaluable at runtime from 3.10. Every use in this package is in
+# annotation position (checked with ast: 27 in annotations, 0 outside), so making
+# annotations lazy keeps the declared floor honest instead of narrowing support.
+from __future__ import annotations
+
 import random
 from typing import Optional
 

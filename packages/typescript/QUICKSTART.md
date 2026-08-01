@@ -36,8 +36,10 @@ console.log(result.isNeutral); // true/false
 ```typescript
 import { pricesToMatrix } from '@zeropointlogic/sdk';
 
-const prices = [100, 102, 101, 103, 105];
-const matrix = pricesToMatrix(prices);
+// pricesToMatrix(prices, window) needs MORE than `window` prices, and a square
+// matrix needs exactly 2 * window of them. Six prices at window 3 → a 3x3.
+const prices = [100, 102, 101, 103, 105, 104];
+const matrix = pricesToMatrix(prices, 3);
 const result = await client.compute({ matrix, samples: 5000 });
 ```
 
@@ -84,7 +86,12 @@ try {
 
 ```typescript
 const usage = await client.getUsage();
-console.log(usage.tokensRemainingMonth); // 9,950
+console.log(usage.tokensRemaining); // 9950
+
+// Three server-side failures all report 0 used, so check how it was obtained:
+if (!usage.usageMeasured) {
+  console.warn(`usage unknown (source=${usage.source})`);
+}
 ```
 
 ## 7. Get Plans
@@ -92,7 +99,7 @@ console.log(usage.tokensRemainingMonth); // 9,950
 ```typescript
 const plans = await client.getPlans();
 plans.plans.forEach((plan) => {
-  console.log(`${plan.name}: $${plan.price}/month`);
+  console.log(`${plan.name}: $${plan.priceUsd}/month, max d=${plan.maxDimension}`);
 });
 ```
 
@@ -117,7 +124,7 @@ plans.plans.forEach((plan) => {
 ✓ Zero dependencies  
 ✓ Full TypeScript  
 ✓ Automatic retry logic  
-✓ Request timeout (30s)  
+✓ Request timeout (65s default, above the engine's 60s /sweep ceiling)  
 ✓ Batch processing with concurrency  
 ✓ Tree-shakeable exports  
 ✓ Works in Node.js & browsers  
@@ -153,14 +160,19 @@ Plain `INHIBITED` is not a value.
 
 ```typescript
 {
-  ain: 0.732145,                // AI Neutrality Index, float 0.0-1.0 (6 decimals)
-  pOutput: 0.48,               // Predicted output probability
-  deviation: 0.12,             // Standard deviation
-  status: 'STABLE',            // Categorical status
-  isNeutral: true,             // Computed: ain >= 0.7
-  biasLevel: 'low',            // Computed: from ain
+  ain: 0.732145,               // AI Neutrality Index, float 0.0-1.0 (6 decimals)
+  pOutput: 0.48,               // The engine's measurement: output balance,
+                               //   0.500 being equilibrium. ain is derived from
+                               //   it through an absolute value, so only pOutput
+                               //   says which side of equilibrium you are on.
+  deviation: 0.12,             // Distance from equilibrium, as the engine reports it
+  status: 'STABLE',            // Stability regime
+  ainStatus: 'MODERATE_BIAS',  // AIN band — a different field from `status`
+  isNeutral: false,            // From the band; 0.73 is below the engine's
+                               //   NEUTRAL floor of 0.80
+  biasLevel: 'moderate',       // From the same band, so the two agree
   tokensUsed: 1,               // Tokens consumed
-  tokensRemaining: 999,        // Tokens left in quota
+  tokensRemaining: 999,        // Tokens left, or absent if the engine didn't say
 }
 ```
 

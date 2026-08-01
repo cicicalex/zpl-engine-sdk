@@ -144,7 +144,14 @@ components:
           description: Engine health flag. Currently always `"ok"` when reachable.
         version:
           type: string
-          example: "3.1.0"
+          example: "3.2.0"
+        uptime_seconds:
+          type: integer
+          example: 4212
+          description: |
+            Seconds since the engine process started. This is process uptime,
+            not an uptime percentage — the endpoint reports no availability
+            ratio, latency or error rate.
       additionalProperties: true
 
     PlansWrapper:
@@ -199,6 +206,11 @@ components:
           minimum: 100
           maximum: 50000
           default: 1000
+          description: |
+            The engine CLAMPS to this range rather than rejecting outside it,
+            and returns the clamped figure as `samples` in the response — so a
+            request for 5 runs 100, and one for 200000 runs 50000, silently.
+            Read `samples` off the response for the count that actually ran.
 
     ComputeResponse:
       type: object

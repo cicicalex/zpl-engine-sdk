@@ -188,16 +188,72 @@ export function validateMatrix(matrix: BinaryMatrix): void {
 }
 
 /**
- * Convert AIN score to bias level
+ * Convert an AIN score to a bias level, on the engine's boundaries.
+ *
+ * AUDIT 2026-08-01: this used 0.8 / 0.7 / 0.5 / 0.3, none of which is a band
+ * edge the engine recognises, and the 2026-07-31 pass that aligned
+ * {@link interpretAIN} to `ain_status` left this function and its private
+ * duplicate inside the client untouched. The result was a single object
+ * disagreeing with itself: at ain 0.75 the engine says `MODERATE_BIAS` and
+ * this said `'low'`, which is the label for a reading with almost no bias.
+ * A caller switching on `biasLevel` was told the opposite of what the engine
+ * reported for the same number.
+ *
+ * The boundaries below are the engine's own (`zpl-core/src/ain.rs`), collapsed
+ * onto five labels exactly once — see {@link BiasLevel} for why the merge is
+ * made where it is. Nothing between the labels is a threshold chosen here.
+ *
  * @param ain - AI Neutrality Index (0-1)
  * @returns Bias level classification
  */
 export function ainToBiasLevel(ain: number): BiasLevel {
-  if (ain >= 0.8) return 'none';
-  if (ain >= 0.7) return 'low';
-  if (ain >= 0.5) return 'moderate';
-  if (ain >= 0.3) return 'high';
+  if (ain >= 0.9) return 'none';
+  if (ain >= 0.8) return 'low';
+  if (ain >= 0.6) return 'moderate';
+  if (ain >= 0.4) return 'high';
   return 'critical';
+}
+
+/**
+ * Convert an `ain_status` band to a bias level.
+ *
+ * Preferred over {@link ainToBiasLevel} whenever the engine sent a band: the
+ * band IS the engine's classification of that reading, so deriving from it
+ * cannot round to the far side of a boundary the way re-deriving from the
+ * float can.
+ *
+ * @param status - AIN band value (`ain_status`), not the stability `status`
+ */
+export function ainStatusToBiasLevel(status: AINStatus): BiasLevel {
+  const map: Record<AINStatus, BiasLevel> = {
+    CERTIFIED_NEUTRAL: 'none',
+    HIGHLY_NEUTRAL: 'none',
+    NEUTRAL: 'low',
+    MODERATE_BIAS: 'moderate',
+    SIGNIFICANT_BIAS: 'high',
+    HIGH_BIAS: 'critical',
+  };
+  return map[status];
+}
+
+/**
+ * Is this reading neutral by the engine's definition?
+ *
+ * AUDIT 2026-08-01: the client computed `ain >= 0.7`, which sits inside the
+ * engine's MODERATE_BIAS band (0.60 – 0.80). Every reading between 0.70 and
+ * 0.80 was reported as neutral by the SDK and as biased by the engine that
+ * produced it, in the same result object.
+ *
+ * When the engine sent a band, that band decides: the three neutral bands are
+ * the ones without `BIAS` in their name. Without a band, the engine's NEUTRAL
+ * floor of 0.80 decides.
+ *
+ * @param ain - AI Neutrality Index (0-1)
+ * @param ainStatus - the engine's band for this reading, when it sent one
+ */
+export function isNeutralReading(ain: number, ainStatus?: AINStatus): boolean {
+  if (ainStatus !== undefined) return !ainStatus.includes('BIAS');
+  return ain >= 0.8;
 }
 
 /**

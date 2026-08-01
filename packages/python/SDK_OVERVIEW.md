@@ -51,7 +51,7 @@ packages/python/
 #### ZPLClient (Synchronous)
 - Request/response handling with requests library
 - Retry logic with exponential backoff (3 retries default)
-- Timeout configuration (30s default)
+- Timeout configuration (65s default — above the engine's 60s /sweep ceiling)
 - Context manager support
 
 **Key Methods:**
@@ -83,19 +83,26 @@ class ComputeResult:
 ```
 
 **Methods**: `is_neutral()`, `is_stable()`, `has_bias()`
+**Properties**: `bias_level` — derived from `ain_status`, so it cannot
+disagree with the band in the same object.
 
 #### UsageInfo
-API quota tracking with usage percentage and reset date.
+Plan and token usage, plus how the server obtained the usage figure.
 
-**Properties**: `usage_percent`, `is_unlimited`
+**Properties**: `usage_measured` (only `source == "engine_log"` is a real
+reading), `usage_percent`, `is_unlimited`
 
 #### PlanInfo
-Plan details including tokens, pricing in USD/EUR, and features.
+Plan details as `/plans` returns them: name, `tokens_per_month`, `max_d`,
+`max_keys`, `price_usd` and the engine's `unlimited` flag. There is no EUR
+price and no feature list in the response.
 
 **Methods**: `is_free()`
 
 #### HealthStatus
-Engine status with uptime, response time, and error rates.
+Engine `status` ("ok"), `version`, and `uptime_seconds` — how long the engine
+process has been running. The endpoint reports no latency, request rate or
+error rate.
 
 **Methods**: `is_healthy()`
 
@@ -287,7 +294,8 @@ regime). They are never interchangeable.
 ZPLClient(
     api_key="zpl_u_xxx",           # Required (user key from dashboard)
     base_url="https://...",        # Default: production
-    timeout=30,                    # Seconds
+    timeout=65,                    # Seconds (default; keep it above the
+                                   #   engine's ceilings: 30s /compute, 60s /sweep)
     max_retries=3,                 # Retry attempts
     backoff_factor=0.5             # Exponential multiplier
 )

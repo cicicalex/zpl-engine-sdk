@@ -27,6 +27,7 @@ from zeropointlogic.models import (
     StabilityStatusType,
     BiasLevel,
     ain_to_bias_level,
+    bias_level_from_ain_status,
 )
 from zeropointlogic.exceptions import (
     ZPLError,
