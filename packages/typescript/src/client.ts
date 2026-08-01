@@ -158,7 +158,13 @@ export class ZPLClient {
       config.accountBaseUrl,
       'https://zeropointlogic.io',
     );
-    this.timeout = config.timeout || 30000;
+    // AUDIT 2026-08-01: the default was 30000 - exactly the engine's compute
+    // ceiling, and half its sweep ceiling. A deadline equal to the server's
+    // is a coin flip over which side fires first, and losing means the
+    // caller is billed for a computation they abandoned: the engine deducts
+    // before it computes and refunds only on its own timeout. Waiting past
+    // the engine turns the race into a 504 the engine issues and refunds.
+    this.timeout = config.timeout || 65_000;
     this.debug = config.debug || false;
 
     this.retryPolicy = {
