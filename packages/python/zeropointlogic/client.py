@@ -472,7 +472,25 @@ class ZPLClient(BaseZPLClient):
         url = f"{self.base_url}{endpoint}"
         headers = self._get_headers()
 
-        for attempt in range(self.max_retries):
+        # AUDIT 2026-08-02: this was `range(self.max_retries)`, which made the
+        # parameter a count of ATTEMPTS while its name, its docstring and the
+        # TypeScript client all say RETRIES. Measured with a counting
+        # transport, no network involved:
+        #
+        #   max_retries=0  ->  0 requests sent, and this function fell off the
+        #                      end returning None. The caller got
+        #                      "AttributeError: 'NoneType' object has no
+        #                      attribute 'get'" out of the result parser.
+        #                      Someone asking for no retries got a client that
+        #                      never contacted the engine at all.
+        #   max_retries=3  ->  3 attempts, where the TypeScript client makes 4
+        #                      from the same number.
+        #
+        # One first attempt, then that many retries. `max(1, ...)` so a
+        # negative value cannot empty the loop and bring the None back.
+        attempts = max(1, self.max_retries + 1)
+
+        for attempt in range(attempts):
             try:
                 if method == "GET":
                     response = self._requests.get(url, headers=headers, timeout=self.timeout)
@@ -533,13 +551,21 @@ class ZPLClient(BaseZPLClient):
                 ) from e
 
             except self._requests.exceptions.ConnectionError as e:
-                logger.warning(f"Connection error on attempt {attempt + 1}/{self.max_retries}")
-                if attempt == self.max_retries - 1:
-                    raise ZPLNetworkError(f"Connection failed after {self.max_retries} attempts") from e
+                logger.warning(f"Connection error on attempt {attempt + 1}/{attempts}")
+                if attempt == attempts - 1:
+                    raise ZPLNetworkError(f"Connection failed after {attempts} attempts") from e
                 time.sleep(self.backoff_factor * (2 ** attempt))
 
             except self._requests.exceptions.RequestException as e:
                 raise ZPLNetworkError(f"Request failed: {str(e)}") from e
+
+        # Unreachable: `attempts` is at least 1, so the loop above either
+        # returns or raises. Kept so that if the bound is ever loosened again
+        # this fails loudly instead of handing back None, which is how the
+        # defect above reached callers as an AttributeError in the parser.
+        raise ZPLNetworkError(
+            f"No request was attempted for {method} {endpoint} (max_retries={self.max_retries})"
+        )
 
     def compute(
         self,
@@ -793,7 +819,12 @@ class AsyncZPLClient(BaseZPLClient):
         headers = self._get_headers()
         client = await self._ensure_client()
 
-        for attempt in range(self.max_retries):
+        # One first attempt, then that many retries - see the note in
+        # ZPLClient._make_request. Both clients read the same parameter and
+        # must not disagree about what it counts.
+        attempts = max(1, self.max_retries + 1)
+
+        for attempt in range(attempts):
             try:
                 if method == "GET":
                     response = await client.get(url, headers=headers)
@@ -842,13 +873,18 @@ class AsyncZPLClient(BaseZPLClient):
                 ) from e
 
             except self._httpx.ConnectError as e:
-                logger.warning(f"Connection error on attempt {attempt + 1}/{self.max_retries}")
-                if attempt == self.max_retries - 1:
-                    raise ZPLNetworkError(f"Connection failed after {self.max_retries} attempts") from e
+                logger.warning(f"Connection error on attempt {attempt + 1}/{attempts}")
+                if attempt == attempts - 1:
+                    raise ZPLNetworkError(f"Connection failed after {attempts} attempts") from e
                 await self._sleep(self.backoff_factor * (2 ** attempt))
 
             except self._httpx.HTTPError as e:
                 raise ZPLNetworkError(f"Request failed: {str(e)}") from e
+
+        # Unreachable, and kept for the same reason as in the sync client.
+        raise ZPLNetworkError(
+            f"No request was attempted for {method} {endpoint} (max_retries={self.max_retries})"
+        )
 
     async def _sleep(self, seconds: float) -> None:
         """Async sleep wrapper."""

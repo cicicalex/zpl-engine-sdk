@@ -4,6 +4,23 @@ All notable changes to the ZPL Engine SDK monorepo are documented here.
 
 Versioning: **TypeScript** and **Python** package versions in `packages/*` should stay aligned for the same API contract. **zpl-engine-mcp** is released separately from [github.com/cicicalex/zpl-engine-mcp](https://github.com/cicicalex/zpl-engine-mcp); note compatible engine URLs in MCP release notes.
 
+## [Unreleased]
+
+### Fixed
+- **Python:** `max_retries` counted attempts, not retries. `max_retries=0` — a
+  reasonable way to say "do not retry" — sent no request at all and returned
+  `None`, which surfaced to the caller as `AttributeError: 'NoneType' object
+  has no attribute 'get'` from the result parser. Measured with a counting
+  transport: 0 requests. It now sends one.
+- **Python:** the same off-by-one put the two SDKs out of step. With
+  `max_retries=3` the Python client made three attempts where the TypeScript
+  client makes four from the same number. Both now mean one attempt plus that
+  many retries, matching the parameter's own name and documentation. Both the
+  sync and async clients were affected and both are fixed; the connection-retry
+  path is the only one this touches, since a timeout stays terminal.
+- **Python:** neither request loop can end without returning or raising, so a
+  future change to the bound fails loudly instead of handing back `None`.
+
 ## [2.1.0] - 2026-08-02
 
 Applies to both `@zeropointlogic/sdk` (npm) and `zeropointlogic` (PyPI).
