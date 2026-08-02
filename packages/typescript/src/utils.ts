@@ -141,9 +141,31 @@ export function validateMatrix(matrix: BinaryMatrix): void {
 
   const size = matrix.length;
 
+  // AUDIT 2026-08-02: both of the branches below printed `${size}x${size}`,
+  // where size is the ROW count used for both halves, so for anything not
+  // already square the second number was invented. Measured through the built
+  // package:
+  //
+  //   2 rows x 5 columns  -> "got 2x2"
+  //   1 row  x 4 columns  -> "got 1x1"
+  //   150 rows x 7 columns -> "got 150x150"
+  //
+  // The same defect was found and fixed in the engine the same day. It matters
+  // more here: this function runs BEFORE anything is sent, so the engine's
+  // corrected message never reaches the caller — what a customer reads is what
+  // this throws. A caller who sent seven columns and is told they sent 150 goes
+  // looking for a bug that is not there.
+  //
+  // `matrix` is non-empty here but its rows have not been checked yet, so row 0
+  // may not be an array. Only row 0 is reported, and it is described as row 0
+  // rather than as the width of the matrix, because a ragged input has no single
+  // width. Wording matches the engine's so the two surfaces agree.
+  const firstCols = Array.isArray(matrix[0]) ? matrix[0].length : 0;
+
   if (size < 3) {
     throw new ZPLValidationError(
-      `Matrix must be at least 3x3 (got ${size}x${size}). The engine requires dimension >= 3.`
+      `Matrix must be at least 3x3 (got ${size} row(s); row 0 has ${firstCols} column(s)). ` +
+        `The engine requires dimension >= 3.`
     );
   }
   if (size > 100) {
@@ -159,8 +181,8 @@ export function validateMatrix(matrix: BinaryMatrix): void {
     // That is the case where the old sentence would have been useful, and it is
     // the one case it never appeared in.
     throw new ZPLValidationError(
-      `Matrix must be at most 100x100 (got ${size}x${size}). 100 is the engine's ` +
-        `hard maximum, not a plan limit — no plan accepts a larger matrix, ` +
+      `Matrix must be at most 100x100 (got ${size} row(s); row 0 has ${firstCols} column(s)). ` +
+        `100 is the engine's hard maximum, not a plan limit — no plan accepts a larger matrix, ` +
         `including the highest. Reduce the matrix instead.`
     );
   }

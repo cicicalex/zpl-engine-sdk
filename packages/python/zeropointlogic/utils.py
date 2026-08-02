@@ -317,10 +317,31 @@ def validate_matrix(matrix: list[list[int]]) -> tuple[bool, str]:
         return False, "Matrix must be a list"
 
     n = len(matrix)
+
+    # AUDIT 2026-08-02: both of the branches below printed ``{n}x{n}``, where n
+    # is the ROW count used for both halves, so for anything not already square
+    # the second number was invented. Measured by running this function:
+    #
+    #   2 rows x 5 columns   -> "got 2x2"
+    #   1 row  x 4 columns   -> "got 1x1"
+    #   150 rows x 7 columns -> "got 150x150"
+    #
+    # The same defect was found and fixed in the engine the same day. It matters
+    # more here: this runs BEFORE anything is sent, so the engine's corrected
+    # message never reaches the caller - what a customer reads is what this
+    # returns. A caller who sent seven columns and is told they sent 150 goes
+    # looking for a bug that is not there.
+    #
+    # ``matrix`` is non-empty here but its rows have not been checked yet, so
+    # row 0 may not be a list. Only row 0 is reported, and it is described as
+    # row 0 rather than as the width of the matrix, because a ragged input has
+    # no single width. Wording matches the engine's so the two surfaces agree.
+    first_cols = len(matrix[0]) if isinstance(matrix[0], list) else 0
+
     if n < 3:
         return False, (
-            f"Matrix must be at least 3x3 (got {n}x{n}). The engine requires "
-            "dimension >= 3."
+            f"Matrix must be at least 3x3 (got {n} row(s); row 0 has "
+            f"{first_cols} column(s)). The engine requires dimension >= 3."
         )
     if n > 100:
         # AUDIT 2026-07-31: this said "upgrade plan if you need higher d", which
@@ -335,10 +356,29 @@ def validate_matrix(matrix: list[list[int]]) -> tuple[bool, str]:
         # plan limit of Y". That is the case where the old sentence would have
         # been useful, and it is the one case it never appeared in.
         return False, (
-            f"Matrix must be at most 100x100 (got {n}x{n}). 100 is the engine's "
+            f"Matrix must be at most 100x100 (got {n} row(s); row 0 has "
+            f"{first_cols} column(s)). 100 is the engine's "
             "hard maximum, not a plan limit - no plan accepts a larger matrix, "
             "including the highest. Reduce the matrix instead."
         )
+
+    # AUDIT 2026-08-02: the "is this row a list" check used to live in the loop
+    # at the bottom, AFTER ``len(row)`` had already been taken on every row. So a
+    # matrix carrying a row that is not a sized object -- ``[None, None, None]``,
+    # which is what ``json.loads`` hands back for ``[null, null, null]`` -- raised
+    #
+    #     TypeError: object of type 'NoneType' has no len()
+    #
+    # out of a function whose whole contract is to RETURN whether the input is
+    # valid and never raise. The caller gets a crash where they had arranged to
+    # handle a validation failure. The TypeScript package checks the row type
+    # before reading its length and refuses cleanly; only this one raised.
+    #
+    # Found by a test written for the message defect above, on an input added to
+    # cover the new read of ``matrix[0]``.
+    for i, row in enumerate(matrix):
+        if not isinstance(row, list):
+            return False, f"Row {i} is not a list"
 
     row_lengths = set(len(row) for row in matrix)
     if len(row_lengths) > 1:
@@ -352,8 +392,6 @@ def validate_matrix(matrix: list[list[int]]) -> tuple[bool, str]:
         )
 
     for i, row in enumerate(matrix):
-        if not isinstance(row, list):
-            return False, f"Row {i} is not a list"
         for j, val in enumerate(row):
             if val not in (0, 1):
                 return False, f"Row {i}, Col {j} is {val}, must be 0 or 1"
