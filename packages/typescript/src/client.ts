@@ -38,6 +38,7 @@ import {
   ainToBiasLevel,
   ainStatusToBiasLevel,
   isNeutralReading,
+  redactSecretsInText,
 } from './utils.js';
 
 import { SDK_VERSION, ZPL_SDK_CLIENT_TYPE } from './meta.js';
@@ -871,7 +872,17 @@ export class ZPLClient {
       const contentType = response.headers.get('content-type');
 
       if (contentType?.includes('application/json')) {
-        return (await response.json()) as Record<string, unknown>;
+        // AUDIT 2026-08-02: this returned the engine's body untouched, and it
+        // ends up on the thrown error as `details`. Measured: an engine error
+        // echoing a key produced a generic `message` and a `details` holding
+        // the key, a Bearer token and a Stripe key verbatim. The package
+        // already shipped redactSecretsInText for exactly this and never
+        // called it.
+        //
+        // Redacting the serialised form rather than walking the object keeps it
+        // whole whatever shape the engine sends, including nested fields.
+        const raw = (await response.json()) as Record<string, unknown>;
+        return JSON.parse(redactSecretsInText(JSON.stringify(raw))) as Record<string, unknown>;
       }
 
       return null;

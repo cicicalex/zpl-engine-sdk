@@ -508,7 +508,27 @@ export function normalizeEngineComputeResult(raw: Record<string, unknown>): Omit
   return out;
 }
 
-/** Redact ZPL-style API key material from a string (logs / echoed errors). */
+/**
+ * Redact secret-shaped material from a string (logs / echoed errors).
+ *
+ * AUDIT 2026-08-02: this covered ZPL keys and nothing else, and the SDK never
+ * called it — it was exported for consumers and skipped internally. Measured
+ * against an engine that echoed a key back in an error body, which the MCP's
+ * own notes record as having happened for real: the thrown error carried
+ * `message: "Invalid request"` and a `details` field holding the engine's text
+ * verbatim, ZPL key, Bearer token and Stripe key intact. A consumer logging the
+ * error object — the ordinary thing to do — writes all three down.
+ *
+ * The shapes now match the set the CLI and the MCP redact, checked by the same
+ * corpus in all three suites. The quote exclusion on the Bearer pattern is
+ * deliberate and copied along with it: its twins run over serialised JSON,
+ * where a greedier token swallows the closing quote.
+ */
 export function redactSecretsInText(text: string): string {
-  return text.replace(/\bzpl_[su]_[a-z0-9_]{20,}/gi, 'zpl_[REDACTED]');
+  return text
+    .replace(/zpl_[us]_(?:[a-z]+_)?[a-f0-9]{20,}/gi, 'zpl_[REDACTED]')
+    .replace(/Bearer\s+[^\s"]+/gi, 'Bearer [REDACTED]')
+    .replace(/sk-[A-Za-z0-9_-]+/gi, '[REDACTED]')
+    .replace(/sk_(?:live|test)_[A-Za-z0-9_-]+/gi, '[REDACTED]')
+    .replace(/gsk_[A-Za-z0-9_-]+/gi, '[REDACTED]');
 }
