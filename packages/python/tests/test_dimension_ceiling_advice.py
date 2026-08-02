@@ -18,10 +18,15 @@ this message never fires in, and wrong for the only one it does.
 
 from pathlib import Path
 
+from sibling_repo import require_sibling
+
 from zeropointlogic.utils import validate_matrix
 
 TS_UTILS = Path(__file__).resolve().parents[2] / "typescript" / "src" / "utils.ts"
-ENGINE_MATRIX = Path("C:/Proiecte/zpl-engine-source/crates/zpl-core/src/matrix.rs")
+# AUDIT 2026-08-02: an absolute path on one machine, and the check below turned
+# a missing file into an early return, which pytest counts as a pass. Resolved
+# by environment or relative layout now, and absence is a visible skip.
+ENGINE_MATRIX = ("crates", "zpl-core", "src", "matrix.rs")
 
 
 def square(n):
@@ -45,12 +50,11 @@ def test_over_limit_does_not_suggest_an_upgrade():
 
 def test_the_ceiling_matches_the_engine_constant():
     # The number is written into the message, so it can go stale silently.
-    if not ENGINE_MATRIX.exists():
-        return  # engine repo not checked out beside this one
+    text = require_sibling("engine", *ENGINE_MATRIX)
 
     import re
 
-    m = re.search(r"const MAX_N:\s*usize\s*=\s*(\d+)", ENGINE_MATRIX.read_text(encoding="utf-8"))
+    m = re.search(r"const MAX_N:\s*usize\s*=\s*(\d+)", text)
     assert m, "could not read MAX_N from the engine"
     max_n = int(m.group(1))
 

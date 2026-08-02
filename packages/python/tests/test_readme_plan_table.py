@@ -28,8 +28,13 @@ import re
 import unittest
 from pathlib import Path
 
+from sibling_repo import read_sibling, require_sibling, why_skipped
+
 README = Path(__file__).resolve().parents[1] / "README.md"
-ENGINE_PLANS = Path("C:/Proiecte/zpl-engine-source/crates/zpl-security/src/plans.rs")
+# AUDIT 2026-08-02: was an absolute path on one machine, which also published
+# the private repo's name from a public repo. Resolved by environment or
+# relative layout now.
+ENGINE_PLANS = ("crates", "zpl-security", "src", "plans.rs")
 
 VARIANT_TO_ROW = {
     "Free": "Free",
@@ -45,7 +50,7 @@ VARIANT_TO_ROW = {
 
 def engine_plans():
     """max_d, tokens_per_month, max_keys and price, from the enforcing side."""
-    text = ENGINE_PLANS.read_text(encoding="utf-8")
+    text = require_sibling("engine", *ENGINE_PLANS)
     out = {}
     for m in re.finditer(
         r"Plan::(\w+)\s*=>\s*PlanLimits\s*\{\s*max_d:\s*(\d+),\s*"
@@ -84,8 +89,8 @@ def readme_plans():
 
 class TestReadmePlanTable(unittest.TestCase):
     def setUp(self):
-        if not ENGINE_PLANS.exists():
-            self.skipTest("engine repo not checked out beside this one")
+        if read_sibling("engine", *ENGINE_PLANS) is None:
+            self.skipTest(why_skipped("engine", *ENGINE_PLANS))
 
     def test_every_plan_row_matches_what_the_engine_enforces(self):
         engine = engine_plans()
