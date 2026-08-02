@@ -33,14 +33,21 @@ under *Fixed* and *Packaging*; the date above is the day 2.1.0 was published.
 
 ### Fixed
 
-- **Error objects carried the engine's reply verbatim.** The package shipped a
-  redaction helper, documented it "for logs / echoed errors", exported it — and
-  never called it. Measured against an engine that echoed a key back in an
-  error body: `message` read "Invalid request" while `details` held the
-  engine's text intact, API key and all. The reassuring generic message is what
-  made it look handled; anyone logging the error object — the ordinary thing to
-  do — wrote the secret into their logs. The helper now runs on what reaches
-  the caller.
+Items below are marked with the package they apply to where they do not apply
+to both. Verified against the published packages, not inferred from the
+changes: a stub engine was made to echo credentials back in an error body on
+five different status codes, and both clients were driven against it.
+
+- **TypeScript: error objects carried the engine's reply verbatim.** The
+  package shipped a redaction helper, documented it "for logs / echoed
+  errors", exported it — and never called it. Measured against an engine that
+  echoed a key back in an error body: `message` read "Invalid request" while
+  `details` held the engine's text intact, API key and all. The reassuring
+  generic message is what made it look handled; anyone logging the error object
+  — the ordinary thing to do — wrote the secret into their logs. The helper now
+  runs on what reaches the caller. Python was measured on the same five status
+  codes and never carried the body into the exception, so there was nothing to
+  fix there.
 - **A rejected matrix was described as a shape the caller had not sent.** Both
   languages reported the rejection as though the input had been square, so
   somebody who sent three rows of four columns was told about a 3x3. The
@@ -62,16 +69,17 @@ under *Fixed* and *Packaging*; the date above is the day 2.1.0 was published.
 - **The Python package could not be imported on the Python it advertises.**
   `requires-python` declares 3.9 and four modules used syntax that needs 3.10,
   so an install on the advertised floor failed at import.
-- **The default timeout was exactly the engine's compute ceiling,** and half of
-  its sweep ceiling. Equal to the server's own deadline is a coin flip over
-  which side fires first, and losing it means the caller is billed for work
-  they abandoned: the engine refunds when its own timeout fires, not when the
-  client gives up. For sweep it was not a coin flip — the SDK gave up first
-  every time. The default now sits past the slowest route, so the engine's
-  refunding timeout is what arrives. A shorter deadline is still available to
-  anyone who passes one deliberately.
+- **TypeScript: the default timeout was exactly the engine's compute ceiling,**
+  and half of its sweep ceiling. Equal to the server's own deadline is a coin
+  flip over which side fires first, and losing it means the caller is billed
+  for work they abandoned: the engine refunds when its own timeout fires, not
+  when the client gives up. For sweep it was not a coin flip — the SDK gave up
+  first every time. The default now sits past the slowest route, so the
+  engine's refunding timeout is what arrives. A shorter deadline is still
+  available to anyone who passes one deliberately. Python's default was already
+  65 seconds, above both ceilings, and is unchanged.
 
-### Packaging
+### Packaging — TypeScript
 
 - **A publish would have shipped a package with no code in it.** `files` ships
   `dist/`, `.gitignore` excludes it, and nothing built it at publish time — so
